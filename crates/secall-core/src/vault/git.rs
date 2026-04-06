@@ -78,6 +78,28 @@ impl<'a> VaultGit<'a> {
         })
     }
 
+    /// unstaged 변경이 있으면 자동 커밋. pull 전에 호출하여 rebase 충돌 방지.
+    pub fn auto_commit(&self) -> crate::error::Result<bool> {
+        if !self.is_git_repo() {
+            return Ok(false);
+        }
+
+        let status = self.run_git(&["status", "--porcelain"])?;
+        let changes = String::from_utf8_lossy(&status.stdout);
+        if changes.trim().is_empty() {
+            return Ok(false);
+        }
+
+        let change_count = changes.lines().count();
+        tracing::info!(changes = change_count, "auto-committing unstaged vault changes before pull");
+
+        // vault 관련 파일만 stage (raw/, wiki/, index.md, log.md, .gitignore)
+        self.run_git(&["add", "raw/", "wiki/", "index.md", "log.md", ".gitignore"])?;
+        self.run_git(&["commit", "-m", "auto: uncommitted vault changes"])?;
+
+        Ok(true)
+    }
+
     /// 변경된 파일을 commit + push
     pub fn push(&self, message: &str) -> crate::error::Result<PushResult> {
         if !self.is_git_repo() {

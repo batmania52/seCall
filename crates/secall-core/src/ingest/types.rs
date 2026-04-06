@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AgentKind {
     ClaudeCode,
+    ClaudeAi,
     Codex,
     GeminiCli,
 }
@@ -14,6 +15,7 @@ impl AgentKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             AgentKind::ClaudeCode => "claude-code",
+            AgentKind::ClaudeAi => "claude-ai",
             AgentKind::Codex => "codex",
             AgentKind::GeminiCli => "gemini-cli",
         }

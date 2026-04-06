@@ -3,9 +3,12 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Result};
 use secall_core::{
     hooks::run_post_ingest_hook,
-    ingest::detect::{
-        detect_parser, find_claude_sessions, find_codex_sessions, find_gemini_sessions,
-        find_sessions_for_cwd,
+    ingest::{
+        detect::{
+            detect_parser, find_claude_sessions, find_codex_sessions, find_gemini_sessions,
+            find_sessions_for_cwd,
+        },
+        AgentKind,
     },
     search::tokenizer::create_tokenizer,
     search::{Bm25Indexer, SearchEngine},
@@ -72,8 +75,54 @@ pub async fn ingest_sessions(
     let mut skipped = 0usize;
     let mut errors = 0usize;
 
+    // BM25/vault 완료 후 벡터 임베딩을 일괄 처리하기 위한 수집 목록.
+    let mut vector_tasks: Vec<secall_core::ingest::Session> = Vec::new();
+
     for session_path in &paths {
-        // Quick duplicate check by filename stem
+        // detect_parser()를 한 번 호출 — 포맷 탐지와 라우팅을 동시에 결정
+        let parser = match detect_parser(session_path) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::warn!(path = %session_path.display(), error = %e, "failed to detect session format");
+                errors += 1;
+                continue;
+            }
+        };
+
+        // ClaudeAiParser는 항상 parse_all() 경로 (1:N)
+        // agent_kind()로 판단하여 포맷·인코딩 방식과 무관하게 정확히 라우팅
+        if parser.agent_kind() == AgentKind::ClaudeAi {
+            match parser.parse_all(session_path) {
+                Ok(sessions) => {
+                    eprintln!(
+                        "Parsed {} conversations from {}",
+                        sessions.len(),
+                        session_path.display()
+                    );
+                    for session in sessions {
+                        ingest_single_session(
+                            config,
+                            db,
+                            engine,
+                            vault,
+                            session,
+                            format,
+                            &mut ingested,
+                            &mut skipped,
+                            &mut errors,
+                            &mut vector_tasks,
+                        );
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(path = %session_path.display(), error = %e, "failed to parse multi-session file");
+                    errors += 1;
+                }
+            }
+            continue;
+        }
+
+        // 1:1 파서: filename-stem 힌트로 빠른 중복 체크
         let session_id_hint = session_path
             .file_stem()
             .and_then(|s| s.to_str())
@@ -92,77 +141,34 @@ pub async fn ingest_sessions(
             }
         }
 
-        match parse_file(session_path) {
+        match parser.parse(session_path) {
             Ok(session) => {
-                // Check again with actual parsed session ID
-                match db.session_exists(&session.id) {
-                    Ok(true) => {
-                        skipped += 1;
-                        continue;
-                    }
-                    Ok(false) => {}
-                    Err(e) => {
-                        tracing::warn!(path = %session_path.display(), error = %e, "DB check failed, skipping");
-                        errors += 1;
-                        continue;
-                    }
-                }
-
-                // 1. vault 파일 쓰기 (트랜잭션 밖)
-                let rel_path = match vault.write_session(&session) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        tracing::warn!(path = %session_path.display(), error = %e, "vault write failed");
-                        errors += 1;
-                        continue;
-                    }
-                };
-
-                let vault_path_str = rel_path.to_string_lossy().to_string();
-
-                // 2. BM25 인덱싱 + vault_path 저장을 트랜잭션으로 래핑
-                let bm25_result = db.with_transaction(|| {
-                    let stats = engine.index_session_bm25(db, &session)?;
-                    db.update_session_vault_path(&session.id, &vault_path_str)?;
-                    Ok(stats)
-                });
-
-                let index_stats = match bm25_result {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::warn!(path = %session_path.display(), error = %e, "indexing failed, rolling back");
-                        // Cleanup: vault 파일 삭제
-                        if let Err(rm_err) =
-                            std::fs::remove_file(config.vault.path.join(&rel_path))
-                        {
-                            tracing::warn!(error = %rm_err, "failed to cleanup vault file");
-                        }
-                        errors += 1;
-                        continue;
-                    }
-                };
-
-                // 3. 벡터 인덱싱 (비동기, 트랜잭션 밖 — 실패해도 데이터 정합성에 영향 없음)
-                {
-                    let vec_stats = engine.index_session_vectors(db, &session).await;
-                    if let Err(e) = vec_stats {
-                        tracing::warn!(session = &session.id[..8.min(session.id.len())], error = %e, "vector embedding failed");
-                    }
-                }
-
-                // Compute abs_path for display and hooks
-                let abs_path = config.vault.path.join(&rel_path);
-                print_ingest_result(&session, &abs_path, &index_stats, format);
-                ingested += 1;
-
-                // Run post-ingest hook (트랜잭션 밖, 비치명적)
-                if let Err(e) = run_post_ingest_hook(config, &session, &abs_path) {
-                    tracing::warn!(session = &session.id[..8.min(session.id.len())], error = %e, "post-ingest hook failed");
-                }
+                ingest_single_session(
+                    config,
+                    db,
+                    engine,
+                    vault,
+                    session,
+                    format,
+                    &mut ingested,
+                    &mut skipped,
+                    &mut errors,
+                    &mut vector_tasks,
+                );
             }
             Err(e) => {
                 tracing::warn!(path = %session_path.display(), error = %e, "failed to parse session file");
                 errors += 1;
+            }
+        }
+    }
+
+    // 벡터 인덱싱 일괄 처리 (BM25/vault와 분리하여 체감 속도 개선)
+    if !vector_tasks.is_empty() {
+        eprintln!("Embedding {} session(s)...", vector_tasks.len());
+        for session in &vector_tasks {
+            if let Err(e) = engine.index_session_vectors(db, session).await {
+                tracing::warn!(session = &session.id[..8.min(session.id.len())], error = %e, "vector embedding failed");
             }
         }
     }
@@ -172,6 +178,77 @@ pub async fn ingest_sessions(
         skipped,
         errors,
     })
+}
+
+/// 단일 Session을 vault + BM25 + 벡터 목록에 ingest
+#[allow(clippy::too_many_arguments)]
+fn ingest_single_session(
+    config: &Config,
+    db: &Database,
+    engine: &SearchEngine,
+    vault: &Vault,
+    session: secall_core::ingest::Session,
+    format: &OutputFormat,
+    ingested: &mut usize,
+    skipped: &mut usize,
+    errors: &mut usize,
+    vector_tasks: &mut Vec<secall_core::ingest::Session>,
+) {
+    // 실제 session.id 기준 중복 체크
+    match db.session_exists(&session.id) {
+        Ok(true) => {
+            *skipped += 1;
+            return;
+        }
+        Ok(false) => {}
+        Err(e) => {
+            tracing::warn!(session = &session.id, error = %e, "DB check failed, skipping");
+            *errors += 1;
+            return;
+        }
+    }
+
+    // 1. vault 파일 쓰기
+    let rel_path = match vault.write_session(&session) {
+        Ok(p) => p,
+        Err(e) => {
+            tracing::warn!(session = &session.id, error = %e, "vault write failed");
+            *errors += 1;
+            return;
+        }
+    };
+
+    let vault_path_str = rel_path.to_string_lossy().to_string();
+
+    // 2. BM25 인덱싱 + vault_path 저장 (트랜잭션)
+    let bm25_result = db.with_transaction(|| {
+        let stats = engine.index_session_bm25(db, &session)?;
+        db.update_session_vault_path(&session.id, &vault_path_str)?;
+        Ok(stats)
+    });
+
+    let index_stats = match bm25_result {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::warn!(session = &session.id, error = %e, "indexing failed, rolling back");
+            if let Err(rm_err) = std::fs::remove_file(config.vault.path.join(&rel_path)) {
+                tracing::warn!(error = %rm_err, "failed to cleanup vault file");
+            }
+            *errors += 1;
+            return;
+        }
+    };
+
+    let abs_path = config.vault.path.join(&rel_path);
+    print_ingest_result(&session, &abs_path, &index_stats, format);
+    *ingested += 1;
+
+    if let Err(e) = run_post_ingest_hook(config, &session, &abs_path) {
+        tracing::warn!(session = &session.id[..8.min(session.id.len())], error = %e, "post-ingest hook failed");
+    }
+
+    // 3. 벡터 임베딩을 위해 수집
+    vector_tasks.push(session);
 }
 
 fn collect_paths(path: Option<&str>, auto: bool, cwd: Option<&Path>) -> Result<Vec<PathBuf>> {
@@ -232,7 +309,3 @@ fn find_session_by_id(id: &str) -> Result<Vec<PathBuf>> {
     Ok(found)
 }
 
-fn parse_file(path: &Path) -> Result<secall_core::ingest::Session> {
-    let parser = detect_parser(path)?;
-    Ok(parser.parse(path)?)
-}

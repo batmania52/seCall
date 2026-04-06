@@ -18,6 +18,18 @@ pub async fn run(local_only: bool, dry_run: bool) -> Result<()> {
         eprintln!("[DRY RUN] No changes will be made.\n");
     }
 
+    // === Phase 0: 이전 sync에서 push되지 않은 변경 자동 커밋 (pull --rebase 실패 방지) ===
+    if !local_only && vault_git.is_git_repo() && !dry_run {
+        match vault_git.auto_commit() {
+            Ok(true) => eprintln!("Auto-committed pending vault changes."),
+            Ok(false) => {}
+            Err(e) => {
+                tracing::warn!(error = %e, "auto-commit failed");
+                eprintln!("  ⚠ Auto-commit failed: {e}");
+            }
+        }
+    }
+
     // === Phase 1: Pull (다른 기기 세션 수신) ===
     if !local_only && vault_git.is_git_repo() {
         if dry_run {

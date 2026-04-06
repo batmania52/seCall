@@ -3,10 +3,17 @@ use std::path::Path;
 
 use anyhow::{anyhow, Result};
 
-use super::{claude::ClaudeCodeParser, codex::CodexParser, gemini::GeminiParser, SessionParser};
+use super::{
+    claude::ClaudeCodeParser,
+    claude_ai::ClaudeAiParser,
+    codex::CodexParser,
+    gemini::GeminiParser,
+    SessionParser,
+};
 
 pub fn detect_parser(path: &Path) -> Result<Box<dyn SessionParser>> {
     let path_str = path.to_string_lossy();
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     // Path-based detection (fastest — check before content sniffing)
     if path_str.contains("/.claude/projects/") || path_str.contains("\\.claude\\projects\\") {
@@ -15,10 +22,17 @@ pub fn detect_parser(path: &Path) -> Result<Box<dyn SessionParser>> {
     if path_str.contains("/.codex/sessions/") || path_str.contains("\\.codex\\sessions\\") {
         return Ok(Box::new(CodexParser));
     }
-    if (path_str.contains("/.gemini/") || path_str.contains("\\.gemini\\"))
-        && path.extension().map(|e| e == "json").unwrap_or(false)
-    {
+    if (path_str.contains("/.gemini/") || path_str.contains("\\.gemini\\")) && ext == "json" {
         return Ok(Box::new(GeminiParser));
+    }
+
+    // claude.ai export: ZIP 파일 (.zip 확장자)
+    if ext == "zip" {
+        if let Ok(data) = std::fs::read(path) {
+            if data.starts_with(b"PK\x03\x04") {
+                return Ok(Box::new(ClaudeAiParser));
+            }
+        }
     }
 
     // Content sniffing: check first line of file
@@ -49,6 +63,25 @@ pub fn detect_parser(path: &Path) -> Result<Box<dyn SessionParser>> {
                                     return Ok(Box::new(GeminiParser));
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // claude.ai export: conversations.json (JSON array with chat_messages)
+    if ext == "json" {
+        if let Ok(data) = std::fs::read_to_string(path) {
+            if data.trim_start().starts_with('[') {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&data) {
+                    if let Some(arr) = v.as_array() {
+                        if arr
+                            .first()
+                            .map(|c| c["chat_messages"].is_array() && c["uuid"].is_string())
+                            .unwrap_or(false)
+                        {
+                            return Ok(Box::new(ClaudeAiParser));
                         }
                     }
                 }
@@ -233,5 +266,18 @@ mod tests {
         let base = tmp.path().join("nonexistent");
         let result = find_gemini_sessions(Some(&base)).unwrap();
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_detect_claude_ai_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let json_path = dir.path().join("conversations.json");
+        std::fs::write(
+            &json_path,
+            r#"[{"uuid":"test","name":"","created_at":"2026-01-01T00:00:00Z","chat_messages":[{"uuid":"m1","text":"hi","content":[],"sender":"human","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","attachments":[],"files":[]}]}]"#,
+        )
+        .unwrap();
+        let parser = detect_parser(&json_path).unwrap();
+        assert_eq!(parser.agent_kind(), super::super::types::AgentKind::ClaudeAi);
     }
 }

@@ -32,6 +32,7 @@ tracing.workspace = true
 usearch.workspace = true
 gethostname.workspace = true
 serde_yaml.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
 tempfile = "3.27.0"

@@ -3,7 +3,7 @@ members = ["crates/secall-core", "crates/secall"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.75"
 license = "AGPL-3.0"
@@ -38,3 +38,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 usearch = "2"
 gethostname = "0.4"
 serde_yaml = "0.9"
+zip = "2"

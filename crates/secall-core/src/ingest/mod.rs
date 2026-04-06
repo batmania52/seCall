@@ -1,6 +1,7 @@
 use std::path::Path;
 
 pub mod claude;
+pub mod claude_ai;
 pub mod codex;
 pub mod detect;
 pub mod gemini;
@@ -19,4 +20,10 @@ pub trait SessionParser: Send + Sync {
 
     /// The agent kind this parser handles
     fn agent_kind(&self) -> AgentKind;
+
+    /// Parse a file that may contain multiple sessions (1:N).
+    /// Default: wraps parse() for 1:1 parsers.
+    fn parse_all(&self, path: &Path) -> crate::error::Result<Vec<Session>> {
+        Ok(vec![self.parse(path)?])
+    }
 }

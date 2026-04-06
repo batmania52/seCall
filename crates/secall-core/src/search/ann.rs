@@ -27,9 +27,19 @@ impl AnnIndex {
                 .to_str()
                 .ok_or_else(|| anyhow::anyhow!("non-UTF-8 ANN index path: {:?}", path))?;
             index.load(path_str).map_err(|e| anyhow::anyhow!("{e}"))?;
+
+            // 로드 후 추가 삽입을 위한 여유 공간 사전 할당.
+            // usearch는 capacity 없이 add()하면 "Reserve capacity ahead of insertions!" 경고를 출력한다.
+            let current = index.size();
+            let reserve_target = current + 10_000;
+            index
+                .reserve(reserve_target)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+
             tracing::info!(
                 path = %path.display(),
-                vectors = index.size(),
+                vectors = current,
+                capacity = reserve_target,
                 "ANN index loaded"
             );
         } else {
@@ -46,6 +56,14 @@ impl AnnIndex {
 
     /// 벡터 추가. key는 turn_vectors 테이블의 rowid.
     pub fn add(&self, key: u64, vector: &[f32]) -> Result<()> {
+        // capacity 부족 시 자동 reserve (방어적 — loaded index 이후 대량 insert 대응)
+        if self.index.size() >= self.index.capacity() {
+            let new_cap = self.index.capacity() + 10_000;
+            self.index
+                .reserve(new_cap)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            tracing::debug!(new_capacity = new_cap, "ANN index auto-reserved");
+        }
         self.index
             .add(key, vector)
             .map_err(|e| anyhow::anyhow!("{e}"))

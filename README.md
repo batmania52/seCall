@@ -28,7 +28,7 @@ AI 에이전트와 나눈 모든 대화를 검색하세요.
 
 ## What is seCall?
 
-seCall is a local-first search engine for AI agent sessions. It ingests conversation logs from **Claude Code**, **Codex CLI**, and **Gemini CLI**, indexes them with hybrid BM25 + vector search, and exposes them via CLI, MCP server, and an Obsidian-compatible knowledge vault.
+seCall is a local-first search engine for AI agent sessions. It ingests conversation logs from **Claude Code**, **Codex CLI**, **Gemini CLI**, and **claude.ai**, indexes them with hybrid BM25 + vector search, and exposes them via CLI, MCP server, and an Obsidian-compatible knowledge vault.
 
 Your AI conversations are a knowledge base. seCall makes them searchable, browsable, and interconnected.
 
@@ -48,6 +48,7 @@ Parse and normalize sessions from multiple AI coding agents into a unified forma
 | Claude Code | JSONL | ✅ Stable |
 | Codex CLI | JSONL | ✅ Stable |
 | Gemini CLI | JSON | ✅ Stable |
+| claude.ai | JSON (ZIP) | ✅ New in v0.2 |
 
 ### Hybrid Search
 
@@ -159,6 +160,9 @@ secall ingest ~/.codex/sessions
 # Ingest Gemini CLI sessions
 secall ingest ~/.gemini/sessions
 
+# Ingest claude.ai export (ZIP or extracted JSON)
+secall ingest ~/Downloads/data-2026-04-06.zip
+
 # Or sync everything in one command (pull + reindex + ingest + push)
 secall sync
 ```
@@ -205,16 +209,16 @@ secall wiki status
 ## Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Claude Code │     │  Codex CLI   │     │  Gemini CLI  │
-│    (JSONL)   │     │   (JSONL)    │     │    (JSON)    │
-└──────┬───────┘     └──────┬───────┘     └──────┬───────┘
-       │                    │                    │
-       └────────────┬───────┴────────────────────┘
-                    │
-              ┌─────▼──────┐
-              │   Parsers   │  claude.rs / codex.rs / gemini.rs
-              └─────┬──────┘
+┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│  Claude Code │  │ Codex CLI │  │Gemini CLI│  │claude.ai │
+│    (JSONL)   │  │  (JSONL)  │  │  (JSON)  │  │JSON (ZIP)│
+└──────┬───────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘
+       │               │             │              │
+       └───────┬───────┴─────────────┴──────────────┘
+               │
+         ┌─────▼──────┐
+         │   Parsers   │  claude.rs / codex.rs / gemini.rs / claude_ai.rs
+         └─────┬──────┘
                     │
           ┌─────────▼─────────┐
           │   Unified Session  │  Session → Turn → Action
@@ -335,7 +339,7 @@ This project was developed using AI coding agents (Claude Code, Codex) orchestra
 
 ## seCall이란?
 
-seCall은 AI 에이전트 세션을 위한 로컬 퍼스트 검색 엔진입니다. **Claude Code**, **Codex CLI**, **Gemini CLI**의 대화 로그를 수집하고, BM25 + 벡터 하이브리드 검색으로 인덱싱하며, CLI/MCP 서버/Obsidian 호환 지식 볼트로 제공합니다.
+seCall은 AI 에이전트 세션을 위한 로컬 퍼스트 검색 엔진입니다. **Claude Code**, **Codex CLI**, **Gemini CLI**, **claude.ai**의 대화 로그를 수집하고, BM25 + 벡터 하이브리드 검색으로 인덱싱하며, CLI/MCP 서버/Obsidian 호환 지식 볼트로 제공합니다.
 
 AI와의 대화는 곧 지식 자산입니다. seCall은 그것을 검색 가능하고, 탐색 가능하며, 서로 연결된 형태로 만듭니다.
 
@@ -355,6 +359,7 @@ AI와의 대화는 곧 지식 자산입니다. seCall은 그것을 검색 가능
 | Claude Code | JSONL | ✅ 안정 |
 | Codex CLI | JSONL | ✅ 안정 |
 | Gemini CLI | JSON | ✅ 안정 |
+| claude.ai | JSON (ZIP) | ✅ v0.2 신규 |
 
 ### 하이브리드 검색
 
@@ -466,6 +471,9 @@ secall ingest ~/.codex/sessions
 # Gemini CLI 세션 수집
 secall ingest ~/.gemini/sessions
 
+# claude.ai export 수집 (ZIP 또는 추출된 JSON)
+secall ingest ~/Downloads/data-2026-04-06.zip
+
 # 또는 한 명령으로 전체 동기화 (pull + reindex + ingest + push)
 secall sync
 ```
@@ -512,16 +520,16 @@ secall wiki status
 ## 아키텍처
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Claude Code │     │  Codex CLI   │     │  Gemini CLI  │
-│    (JSONL)   │     │   (JSONL)    │     │    (JSON)    │
-└──────┬───────┘     └──────┬───────┘     └──────┬───────┘
-       │                    │                    │
-       └────────────┬───────┴────────────────────┘
-                    │
-              ┌─────▼──────┐
-              │   파서들     │  claude.rs / codex.rs / gemini.rs
-              └─────┬──────┘
+┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│  Claude Code │  │ Codex CLI │  │Gemini CLI│  │claude.ai │
+│    (JSONL)   │  │  (JSONL)  │  │  (JSON)  │  │JSON (ZIP)│
+└──────┬───────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘
+       │               │             │              │
+       └───────┬───────┴─────────────┴──────────────┘
+               │
+         ┌─────▼──────┐
+         │   파서들     │  claude.rs / codex.rs / gemini.rs / claude_ai.rs
+         └─────┬──────┘
                     │
           ┌─────────▼─────────┐
           │   통합 세션 모델    │  Session → Turn → Action
