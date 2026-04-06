@@ -1,0 +1,102 @@
+# Plans
+
+Plan document index. Register new plans here.
+
+## Active
+
+### seCall MVP — 에이전트 세션 검색 인프라
+
+- [전체 계획서](secall-mvp.md) — draft, v2.0, 2026-04-05
+
+| # | Title | Phase | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-mvp-task-01.md) | Rust workspace 초기화 | 0 | — | draft |
+| [02](secall-mvp-task-02.md) | SQLite 스키마 설계 + 초기화 | 0 | 01 | draft |
+| [03](secall-mvp-task-03.md) | Claude Code JSONL 파서 | 1 | 01 | draft |
+| [04](secall-mvp-task-04.md) | Markdown 렌더러 | 1 | 03 | draft |
+| [05](secall-mvp-task-05.md) | Vault 구조 초기화 + index/log | 1 | 04 | draft |
+| [06](secall-mvp-task-06.md) | 한국어 BM25 인덱서 | 2 | 02,03 | draft |
+| [07](secall-mvp-task-07.md) | 벡터 인덱서 + 검색 | 2 | 02,03 | draft |
+| [08](secall-mvp-task-08.md) | 하이브리드 검색 (RRF) | 2 | 06,07 | draft |
+| [09](secall-mvp-task-09.md) | CLI 완성 | 3 | 05,08 | draft |
+| [10](secall-mvp-task-10.md) | MCP 서버 | 3 | 08 | draft |
+| [11](secall-mvp-task-11.md) | Ingest 완료 이벤트 + hook | 3 | 09 | draft |
+
+---
+
+### seCall Extensions — 멀티에이전트 + 로컬 NLP
+
+- [전체 계획서](secall-extensions-nlp.md) — draft, v1.0, 2026-04-06
+
+| # | Title | Group | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-extensions-nlp-task-01.md) | Codex CLI 파서 | A | — | draft |
+| [02](secall-extensions-nlp-task-02.md) | Gemini CLI 파서 | A | — | draft |
+| [03](secall-extensions-nlp-task-03.md) | ort ONNX 로컬 임베딩 | B | — | draft |
+| [04](secall-extensions-nlp-task-04.md) | kiwi-rs 토크나이저 | B | — | draft |
+| [05](secall-extensions-nlp-task-05.md) | secall lint | C | 01,02,03,04 | draft |
+
+---
+
+### seCall Wiki — Claude Code 메타에이전트 기반 위키 생성
+
+- [전체 계획서](secall-wiki-claude-code.md) — draft, v1.0, 2026-04-06
+
+| # | Title | Group | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-wiki-claude-code-task-01.md) | Wiki Vault 구조 초기화 | A | — | draft |
+| [02](secall-wiki-claude-code-task-02.md) | 메타에이전트 프롬프트 설계 | A | — | draft |
+| [03](secall-wiki-claude-code-task-03.md) | secall wiki CLI 커맨드 | B | 01,02 | draft |
+| [04](secall-wiki-claude-code-task-04.md) | post-ingest hook 연동 | B | 03 | draft |
+| [05](secall-wiki-claude-code-task-05.md) | 위키 품질 검증 (lint 확장) | B | 01 | draft |
+
+---
+
+### seCall Phase 4 — 검색 고도화 + 인프라 완성
+
+- [전체 계획서](secall-phase-4.md) — draft, v1.0, 2026-04-06
+
+| # | Title | Group | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-phase-4-task-01.md) | ort 모델 자동 다운로드 | A | — | draft |
+| [02](secall-phase-4-task-02.md) | OpenAI 임베딩 API embedder | A | — | draft |
+| [03](secall-phase-4-task-03.md) | MCP HTTP transport | A | — | draft |
+| [04](secall-phase-4-task-04.md) | LLM 쿼리 확장 | A | — | draft |
+
+---
+
+### seCall Refactor P0 — 검색 정확성 결함 수정
+
+- [전체 계획서](secall-refactor-p0.md) — draft, v1.0, 2026-04-06
+
+| # | Title | Group | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-refactor-p0-task-01.md) | BM25 turn_index 수정 | A | — | draft |
+| [02](secall-refactor-p0-task-02.md) | vault_path 상대경로 전환 | A | — | draft |
+| [03](secall-refactor-p0-task-03.md) | Lint L002 session_id 추출 수정 | A | — | draft |
+
+---
+
+### seCall Refactor P1 — 에러 처리 + 데이터 정합성
+
+- [전체 계획서](secall-refactor-p1.md) — draft, v1.0, 2026-04-06
+
+| # | Title | Group | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-refactor-p1-task-01.md) | ingest.rs 에러 전파 | A | — | draft |
+| [02](secall-refactor-p1-task-02.md) | db.rs Result 반환 전환 | A | — | draft |
+| [03](secall-refactor-p1-task-03.md) | ingest 트랜잭션 래핑 | B | 01,02 | draft |
+| [04](secall-refactor-p1-task-04.md) | Codex/Gemini 타임스탬프 복원 | A | — | draft |
+
+---
+
+### seCall Refactor P2 — 인프라 + 성능
+
+- [전체 계획서](secall-refactor-p2.md) — draft, v1.0, 2026-04-06
+
+| # | Title | Group | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-refactor-p2-task-01.md) | tracing 도입 | A | — | draft |
+| [02](secall-refactor-p2-task-02.md) | 벡터 검색 메모리 최적화 | A | — | draft |
+| [03](secall-refactor-p2-task-03.md) | 디렉토리 ingest 멀티에이전트 | A | — | draft |
+| [04](secall-refactor-p2-task-04.md) | BLOB 검증 + CLI/MCP 테스트 | A | — | draft |

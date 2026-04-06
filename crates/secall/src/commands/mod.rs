@@ -1,0 +1,10 @@
+pub mod embed;
+pub mod get;
+pub mod ingest;
+pub mod init;
+pub mod lint;
+pub mod mcp;
+pub mod model;
+pub mod recall;
+pub mod status;
+pub mod wiki;

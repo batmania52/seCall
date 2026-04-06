@@ -1,0 +1,16 @@
+[package]
+name = "secall"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+secall-core = { path = "../secall-core" }
+clap = { version = "4", features = ["derive"] }
+tokio.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+walkdir.workspace = true
+shellexpand = "3"
