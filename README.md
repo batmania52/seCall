@@ -95,7 +95,7 @@ vault/
 
 - **위키 생성**: Claude Code 메타에이전트 기반 (`secall wiki update`)
 - **Obsidian 백링크** (`[[]]`)로 세션 ↔ 위키 페이지 연결
-- Dataview 쿼리를 위한 frontmatter 메타데이터
+- Dataview 쿼리를 위한 frontmatter 메타데이터 (`summary` 필드로 세션 내용 즉시 파악)
 
 ### MCP 서버
 
@@ -274,6 +274,7 @@ secall wiki status
 | `secall mcp` | MCP 서버 시작 |
 | `secall model download` | BGE-M3 ONNX 모델 다운로드 |
 | `secall wiki update` | Claude Code 메타에이전트로 위키 생성 |
+| `secall migrate summary` | 기존 세션에 summary frontmatter 일괄 추가 |
 
 ## MCP 연동
 
@@ -406,7 +407,7 @@ vault/
 
 - **Wiki generation** via Claude Code meta-agent (`secall wiki update`)
 - **Obsidian backlinks** (`[[]]`) connecting sessions ↔ wiki pages
-- Frontmatter metadata for Dataview queries
+- Frontmatter metadata for Dataview queries (`summary` field for at-a-glance session identification)
 
 ### MCP Server
 
@@ -585,6 +586,7 @@ secall wiki status
 | `secall mcp` | Start MCP server |
 | `secall model download` | Download BGE-M3 ONNX model |
 | `secall wiki update` | Generate wiki via Claude Code |
+| `secall migrate summary` | Backfill summary frontmatter for existing sessions |
 
 ## MCP Integration
 
@@ -632,6 +634,22 @@ This project was developed using AI coding agents (Claude Code, Codex) orchestra
 ## License
 
 [AGPL-3.0](LICENSE)
+
+## Updates
+
+| 날짜 | 버전 | 내용 |
+|------|------|------|
+| 2026-04-07 | P10 | 세션 `summary` frontmatter 추가 — 첫 User 턴 기반 자동 생성, `secall migrate summary`로 기존 세션 backfill |
+| 2026-04-07 | P9 | ChatGPT export 파서 설계 (데이터 대기 중) |
+| 2026-04-06 | P8 | 안정화 + GitHub Actions 릴리스 워크플로우, IngestError 구조화 |
+| 2026-04-06 | P7 | `--min-turns`, `embed --all`, `wiki_search` MCP 도구, incremental wiki, `--no-wiki` |
+| 2026-04-05 | v0.2 | claude.ai export 파서, ZIP 자동 해제 |
+| 2026-04-05 | P6 | ANN 인덱스 (usearch HNSW), 성능 개선 |
+| 2026-04-04 | P5 | 멀티 기기 vault Git 동기화, `secall sync`, `reindex --from-vault` |
+| 2026-04-03 | P4 | SecallError typed error, Repository 패턴, usearch ANN |
+| 2026-04-02 | P3 | 품질 기반 리팩토링, 즉시 실행 개선 |
+| 2026-04-01 | P2 | 인프라 + 성능, lint 규칙, 프롬프트 튜닝 |
+| 2026-03-31 | MVP | 초기 릴리스 — Claude Code/Codex/Gemini 파서, BM25+벡터 검색, MCP 서버, Obsidian 볼트 |
 
 ---
 
