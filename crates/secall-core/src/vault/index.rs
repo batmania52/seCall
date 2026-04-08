@@ -4,7 +4,12 @@ use anyhow::Result;
 
 use crate::ingest::Session;
 
-pub fn update_index(vault_path: &Path, session: &Session, md_path: &Path) -> Result<()> {
+pub fn update_index(
+    vault_path: &Path,
+    session: &Session,
+    md_path: &Path,
+    tz: chrono_tz::Tz,
+) -> Result<()> {
     let index_path = vault_path.join("index.md");
     let mut content = if index_path.exists() {
         std::fs::read_to_string(&index_path)?
@@ -35,7 +40,11 @@ pub fn update_index(vault_path: &Path, session: &Session, md_path: &Path) -> Res
 
     let agent = session.agent.as_str();
     let _project = session.project.as_deref().unwrap_or("unknown");
-    let time_str = session.start_time.format("%H:%M").to_string();
+    let time_str = session
+        .start_time
+        .with_timezone(&tz)
+        .format("%H:%M")
+        .to_string();
     let turns = session.turns.len();
 
     let new_entry = format!(

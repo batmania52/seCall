@@ -11,6 +11,23 @@ pub struct Config {
     pub search: SearchConfig,
     pub hooks: HooksConfig,
     pub embedding: EmbeddingConfig,
+    pub output: OutputConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct OutputConfig {
+    /// IANA timezone name (e.g. "Asia/Seoul", "America/New_York")
+    /// Default: "UTC"
+    pub timezone: String,
+}
+
+impl Default for OutputConfig {
+    fn default() -> Self {
+        OutputConfig {
+            timezone: "UTC".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -71,6 +88,7 @@ impl Default for Config {
             search: SearchConfig::default(),
             hooks: HooksConfig::default(),
             embedding: EmbeddingConfig::default(),
+            output: OutputConfig::default(),
         }
     }
 }
@@ -118,6 +136,21 @@ impl Default for VaultConfig {
 }
 
 impl Config {
+    /// 설정된 타임존을 chrono_tz::Tz로 파싱.
+    /// 잘못된 값이면 UTC로 fallback + 경고 로그.
+    pub fn timezone(&self) -> chrono_tz::Tz {
+        self.output
+            .timezone
+            .parse::<chrono_tz::Tz>()
+            .unwrap_or_else(|_| {
+                tracing::warn!(
+                    tz = &self.output.timezone,
+                    "invalid timezone, falling back to UTC"
+                );
+                chrono_tz::Tz::UTC
+            })
+    }
+
     pub fn config_path() -> PathBuf {
         if let Ok(p) = std::env::var("SECALL_CONFIG_PATH") {
             return PathBuf::from(p);
@@ -156,5 +189,41 @@ impl Config {
         let content = toml::to_string_pretty(self)?;
         std::fs::write(&path, content)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_timezone_default_is_utc() {
+        let config = Config::default();
+        assert_eq!(config.output.timezone, "UTC");
+        assert_eq!(config.timezone(), chrono_tz::Tz::UTC);
+    }
+
+    #[test]
+    fn test_timezone_valid_iana() {
+        let mut config = Config::default();
+        config.output.timezone = "Asia/Seoul".to_string();
+        assert_eq!(config.timezone(), chrono_tz::Tz::Asia__Seoul);
+    }
+
+    #[test]
+    fn test_timezone_invalid_falls_back_to_utc() {
+        let mut config = Config::default();
+        config.output.timezone = "INVALID/TZ".to_string();
+        assert_eq!(config.timezone(), chrono_tz::Tz::UTC);
+    }
+
+    #[test]
+    fn test_config_without_output_section() {
+        let toml_str = r#"
+[vault]
+path = "/tmp/test-vault"
+"#;
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.output.timezone, "UTC");
     }
 }

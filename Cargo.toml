@@ -9,7 +9,7 @@ codegen-units = 1
 strip = true
 
 [workspace.package]
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 rust-version = "1.75"
 license = "AGPL-3.0"
@@ -19,6 +19,7 @@ repository = "https://github.com/hang-in/seCall"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 thiserror = "2"

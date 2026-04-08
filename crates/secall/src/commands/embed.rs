@@ -43,6 +43,7 @@ pub async fn run(all: bool, batch_size: Option<usize>, concurrency: usize) -> Re
         total, batch_size, concurrency
     );
 
+    let tz = config.timezone();
     let db_path: Arc<PathBuf> = Arc::new(db_path);
     let counter = Arc::new(AtomicUsize::new(0));
     let total_chunks = Arc::new(AtomicUsize::new(0));
@@ -77,7 +78,7 @@ pub async fn run(all: bool, batch_size: Option<usize>, concurrency: usize) -> Re
                         return;
                     }
                 };
-                match indexer.index_session(&db, &session).await {
+                match indexer.index_session(&db, &session, tz).await {
                     Ok(stats) => {
                         let done = counter.fetch_add(1, Ordering::Relaxed) + 1;
                         let chunks_done = total_chunks

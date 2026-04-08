@@ -59,8 +59,13 @@ impl VectorIndexer {
         Ok(())
     }
 
-    pub async fn index_session(&self, db: &Database, session: &Session) -> Result<IndexStats> {
-        let chunks = chunk_session(session);
+    pub async fn index_session(
+        &self,
+        db: &Database,
+        session: &Session,
+        tz: chrono_tz::Tz,
+    ) -> Result<IndexStats> {
+        let chunks = chunk_session(session, tz);
 
         // Ensure vector table exists
         db.init_vector_table()?;

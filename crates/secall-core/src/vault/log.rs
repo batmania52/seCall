@@ -4,10 +4,19 @@ use anyhow::Result;
 
 use crate::ingest::Session;
 
-pub fn append_log(vault_path: &Path, session: &Session, md_path: &Path) -> Result<()> {
+pub fn append_log(
+    vault_path: &Path,
+    session: &Session,
+    md_path: &Path,
+    tz: chrono_tz::Tz,
+) -> Result<()> {
     let log_path = vault_path.join("log.md");
 
-    let date = session.start_time.format("%Y-%m-%d").to_string();
+    let date = session
+        .start_time
+        .with_timezone(&tz)
+        .format("%Y-%m-%d")
+        .to_string();
     let agent = session.agent.as_str();
     let project = session.project.as_deref().unwrap_or("unknown");
     let id_prefix = &session.id[..session.id.len().min(8)];

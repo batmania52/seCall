@@ -12,7 +12,7 @@ pub struct Chunk {
     pub context: String,
 }
 
-pub fn chunk_session(session: &Session) -> Vec<Chunk> {
+pub fn chunk_session(session: &Session, tz: chrono_tz::Tz) -> Vec<Chunk> {
     let mut chunks = Vec::new();
 
     for turn in &session.turns {
@@ -20,7 +20,7 @@ pub fn chunk_session(session: &Session) -> Vec<Chunk> {
             "Session: {} {} {} | Turn {}: {}",
             session.agent.as_str(),
             session.project.as_deref().unwrap_or("unknown"),
-            session.start_time.format("%Y-%m-%d"),
+            session.start_time.with_timezone(&tz).format("%Y-%m-%d"),
             turn.index + 1,
             turn.role.as_str(),
         );
@@ -144,7 +144,7 @@ mod tests {
             is_sidechain: false,
         }];
         let session = make_session(turns);
-        let chunks = chunk_session(&session);
+        let chunks = chunk_session(&session, chrono_tz::Tz::UTC);
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].seq, 0);
     }
@@ -163,7 +163,7 @@ mod tests {
             is_sidechain: false,
         }];
         let session = make_session(turns);
-        let chunks = chunk_session(&session);
+        let chunks = chunk_session(&session, chrono_tz::Tz::UTC);
         assert!(chunks.len() > 1);
     }
 
@@ -180,7 +180,7 @@ mod tests {
             is_sidechain: false,
         }];
         let session = make_session(turns);
-        let chunks = chunk_session(&session);
+        let chunks = chunk_session(&session, chrono_tz::Tz::UTC);
         assert!(chunks[0].context.contains("claude-code"));
         assert!(chunks[0].context.contains("testproj"));
     }
@@ -200,7 +200,7 @@ mod tests {
             is_sidechain: false,
         }];
         let session = make_session(turns);
-        let chunks = chunk_session(&session);
+        let chunks = chunk_session(&session, chrono_tz::Tz::UTC);
         if chunks.len() > 1 {
             // Each chunk should have seq increasing
             for (i, chunk) in chunks.iter().enumerate() {

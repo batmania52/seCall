@@ -55,7 +55,7 @@ pub fn extract_body_text(content: &str) -> String {
 const TOOL_OUTPUT_MAX_CHARS: usize = 500;
 
 /// Render a Session to Obsidian-compatible Markdown string
-pub fn render_session(session: &Session) -> String {
+pub fn render_session(session: &Session, tz: chrono_tz::Tz) -> String {
     let mut out = String::new();
 
     // Frontmatter
@@ -74,16 +74,19 @@ pub fn render_session(session: &Session) -> String {
     out.push_str(&format!("session_id: {}\n", session.id));
     out.push_str(&format!(
         "date: {}\n",
-        session.start_time.format("%Y-%m-%d")
+        session.start_time.with_timezone(&tz).format("%Y-%m-%d")
     ));
     out.push_str(&format!(
         "start_time: \"{}\"\n",
-        session.start_time.format("%Y-%m-%dT%H:%M:%S+00:00")
+        session
+            .start_time
+            .with_timezone(&tz)
+            .format("%Y-%m-%dT%H:%M:%S%:z")
     ));
     if let Some(end) = session.end_time {
         out.push_str(&format!(
             "end_time: \"{}\"\n",
-            end.format("%Y-%m-%dT%H:%M:%S+00:00")
+            end.with_timezone(&tz).format("%Y-%m-%dT%H:%M:%S%:z")
         ));
     }
     out.push_str(&format!("turns: {}\n", session.turns.len()));
@@ -122,7 +125,11 @@ pub fn render_session(session: &Session) -> String {
 
     // Summary line
     let branch = session.git_branch.as_deref().unwrap_or("-");
-    let start_str = session.start_time.format("%H:%M").to_string();
+    let start_str = session
+        .start_time
+        .with_timezone(&tz)
+        .format("%H:%M")
+        .to_string();
     let time_summary = if let Some(end) = session.end_time {
         let duration = end.signed_duration_since(session.start_time);
         let mins = duration.num_minutes();
@@ -150,7 +157,7 @@ pub fn render_session(session: &Session) -> String {
 
         let ts_str = turn
             .timestamp
-            .map(|t| format!(" ({})", t.format("%H:%M")))
+            .map(|t| format!(" ({})", t.with_timezone(&tz).format("%H:%M")))
             .unwrap_or_default();
 
         out.push_str(&format!(
@@ -225,8 +232,12 @@ pub fn render_session(session: &Session) -> String {
 }
 
 /// Generate the vault-relative path for a session file
-pub fn session_vault_path(session: &Session) -> PathBuf {
-    let date = session.start_time.format("%Y-%m-%d").to_string();
+pub fn session_vault_path(session: &Session, tz: chrono_tz::Tz) -> PathBuf {
+    let date = session
+        .start_time
+        .with_timezone(&tz)
+        .format("%Y-%m-%d")
+        .to_string();
     let filename = session_filename(session);
     PathBuf::from("raw")
         .join("sessions")
@@ -412,7 +423,7 @@ mod tests {
     #[test]
     fn test_render_basic_frontmatter() {
         let session = make_session(vec![]);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         assert!(md.starts_with("---\n"));
         assert!(md.contains("type: session\n"));
         assert!(md.contains("agent: claude-code\n"));
@@ -451,7 +462,7 @@ mod tests {
             },
         ];
         let session = make_session(turns);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         assert!(md.contains("> [!tool]- Bash"));
         assert!(md.contains("ls -la"));
         assert!(md.contains("file1.txt"));
@@ -470,7 +481,7 @@ mod tests {
             is_sidechain: false,
         }];
         let session = make_session(turns);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         assert!(md.contains("> [!thinking]- Thinking"));
         assert!(md.contains("Internal reasoning"));
     }
@@ -478,7 +489,7 @@ mod tests {
     #[test]
     fn test_render_empty_session() {
         let session = make_session(vec![]);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         // Should still have valid frontmatter + title
         assert!(md.contains("---"));
         assert!(md.contains("# claude-code 세션: seCall"));
@@ -487,7 +498,7 @@ mod tests {
     #[test]
     fn test_session_vault_path() {
         let session = make_session(vec![]);
-        let path = session_vault_path(&session);
+        let path = session_vault_path(&session, chrono_tz::Tz::UTC);
         let path_str = path.to_string_lossy();
         assert!(path_str.starts_with("raw/sessions/2026-04-05/"));
         assert!(path_str.contains("claude-code_seCall_a1b2c3d"));
@@ -513,7 +524,7 @@ mod tests {
             is_sidechain: false,
         }];
         let session = make_session(turns);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         // Should be truncated to 500+3 (for "...")
         assert!(md.contains("..."));
     }
@@ -521,7 +532,7 @@ mod tests {
     #[test]
     fn test_frontmatter_yaml_valid() {
         let session = make_session(vec![]);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         // Extract frontmatter
         let after_first = &md[4..]; // skip "---\n"
         let end = after_first.find("---\n").unwrap();
@@ -581,14 +592,14 @@ mod tests {
             Role::User,
             r#"say "hello" and \ backslash"#,
         )]);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         assert!(md.contains(r#"summary: "say \"hello\" and \\ backslash""#));
     }
 
     #[test]
     fn test_summary_in_frontmatter() {
         let session = make_session(vec![make_turn(Role::User, "첫 번째 사용자 메시지")]);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         assert!(md.contains("summary: \"첫 번째 사용자 메시지\""));
         // summary가 status 전에 위치하는지 확인
         let summary_pos = md.find("summary:").unwrap();
@@ -633,10 +644,50 @@ mod tests {
     }
 
     #[test]
+    fn test_render_session_with_kst_timezone() {
+        let session = make_session(vec![]);
+        let tz: chrono_tz::Tz = "Asia/Seoul".parse().unwrap();
+        let md = render_session(&session, tz);
+
+        // UTC 05:30 → KST 14:30
+        assert!(md.contains("date: 2026-04-05"));
+        assert!(md.contains("+09:00"));
+        assert!(md.contains("14:30"));
+    }
+
+    #[test]
+    fn test_render_session_utc_default() {
+        let session = make_session(vec![]);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
+
+        // 기존 동작과 동일
+        assert!(md.contains("date: 2026-04-05"));
+        assert!(md.contains("+00:00"));
+        assert!(md.contains("05:30"));
+    }
+
+    #[test]
+    fn test_vault_path_uses_timezone_date() {
+        let session = make_session(vec![]);
+        let path_utc = session_vault_path(&session, chrono_tz::Tz::UTC);
+        assert!(path_utc.to_string_lossy().contains("2026-04-05"));
+    }
+
+    #[test]
+    fn test_vault_path_date_crosses_midnight() {
+        // UTC 2026-04-05T15:30 → KST 2026-04-06T00:30 (날짜 변경!)
+        let mut session = make_session(vec![]);
+        session.start_time = chrono::Utc.with_ymd_and_hms(2026, 4, 5, 15, 30, 0).unwrap();
+        let tz: chrono_tz::Tz = "Asia/Seoul".parse().unwrap();
+        let path = session_vault_path(&session, tz);
+        assert!(path.to_string_lossy().contains("2026-04-06"));
+    }
+
+    #[test]
     fn test_render_escapes_dataview_in_content() {
         let turns = vec![make_turn(Role::User, "field:: value in conversation")];
         let session = make_session(turns);
-        let md = render_session(&session);
+        let md = render_session(&session, chrono_tz::Tz::UTC);
         // body에서 :: 가 이스케이프되어야 함
         assert!(md.contains("field:\u{200B}: value"));
         // frontmatter의 :: 는 이 테스트와 무관

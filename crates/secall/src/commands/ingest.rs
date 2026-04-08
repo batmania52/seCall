@@ -73,8 +73,10 @@ pub async fn run(
         return Ok(());
     }
 
-    let stats =
-        ingest_sessions(&config, &db, paths, &engine, &vault, min_turns, force, format).await?;
+    let stats = ingest_sessions(
+        &config, &db, paths, &engine, &vault, min_turns, force, format,
+    )
+    .await?;
 
     match format {
         OutputFormat::Text => {
@@ -128,6 +130,7 @@ pub async fn run(
 }
 
 /// ingest 핵심 로직 — sync.rs에서도 재사용
+#[allow(clippy::too_many_arguments)]
 pub async fn ingest_sessions(
     config: &Config,
     db: &Database,
@@ -272,8 +275,9 @@ pub async fn ingest_sessions(
     // 벡터 인덱싱 일괄 처리 (BM25/vault와 분리하여 체감 속도 개선)
     if !vector_tasks.is_empty() {
         eprintln!("Embedding {} session(s)...", vector_tasks.len());
+        let tz = config.timezone();
         for session in &vector_tasks {
-            if let Err(e) = engine.index_session_vectors(db, session).await {
+            if let Err(e) = engine.index_session_vectors(db, session, tz).await {
                 tracing::warn!(session = &session.id[..8.min(session.id.len())], error = %e, "vector embedding failed");
                 error_details.push(IngestError {
                     path: String::new(),
@@ -340,7 +344,10 @@ fn ingest_single_session(
                 *errors += 1;
                 return;
             }
-            tracing::info!(session = &session.id, "deleted existing session for re-ingest");
+            tracing::info!(
+                session = &session.id,
+                "deleted existing session for re-ingest"
+            );
         }
         Ok(false) => {}
         Err(e) => {
@@ -357,7 +364,8 @@ fn ingest_single_session(
     }
 
     // 1. vault 파일 쓰기
-    let rel_path = match vault.write_session(&session) {
+    let tz = config.timezone();
+    let rel_path = match vault.write_session(&session, tz) {
         Ok(p) => p,
         Err(e) => {
             tracing::warn!(session = &session.id, error = %e, "vault write failed");
@@ -404,7 +412,7 @@ fn ingest_single_session(
     *ingested += 1;
     new_session_ids.push(session.id.clone());
 
-    if let Err(e) = run_post_ingest_hook(config, &session, &abs_path) {
+    if let Err(e) = run_post_ingest_hook(config, &session, &abs_path, tz) {
         tracing::warn!(session = &session.id[..8.min(session.id.len())], error = %e, "post-ingest hook failed");
     }
 

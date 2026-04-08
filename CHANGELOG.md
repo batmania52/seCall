@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.2 (2026-04-08)
+
+### Added
+- `config.toml`에 `[output] timezone` 설정 추가 — IANA 타임존(예: `Asia/Seoul`)으로 vault 마크다운 타임스탬프 렌더링. 기본값 UTC.
+
+### Changed
+- vault 디렉토리 경로(`raw/sessions/YYYY-MM-DD/`)가 설정된 타임존 기준 날짜로 생성
+- frontmatter `start_time`/`end_time`에 동적 UTC 오프셋 적용 (예: `+09:00`)
+
 ## v0.2.1 (2026-04-08)
 
 ### Added

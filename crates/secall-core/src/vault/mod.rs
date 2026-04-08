@@ -35,12 +35,12 @@ impl Vault {
 
     /// Write session markdown to vault and update index/log
     /// Returns the relative path of the written file (relative to vault root)
-    pub fn write_session(&self, session: &Session) -> Result<PathBuf> {
+    pub fn write_session(&self, session: &Session, tz: chrono_tz::Tz) -> Result<PathBuf> {
         // Render markdown
-        let md_content = render_session(session);
+        let md_content = render_session(session, tz);
 
         // Determine target path
-        let rel_path = session_vault_path(session);
+        let rel_path = session_vault_path(session, tz);
         let abs_path = self.path.join(&rel_path);
 
         // Create parent directory
@@ -54,8 +54,8 @@ impl Vault {
         std::fs::rename(&tmp_path, &abs_path)?;
 
         // Update index and log
-        index::update_index(&self.path, session, &rel_path)?;
-        log::append_log(&self.path, session, &rel_path)?;
+        index::update_index(&self.path, session, &rel_path, tz)?;
+        log::append_log(&self.path, session, &rel_path, tz)?;
 
         Ok(rel_path)
     }
@@ -208,7 +208,7 @@ mod tests {
         let vault = Vault::new(dir.path().to_path_buf());
         vault.init().unwrap();
         let session = make_session();
-        let rel_path = vault.write_session(&session).unwrap();
+        let rel_path = vault.write_session(&session, chrono_tz::Tz::UTC).unwrap();
 
         // 반환값이 상대경로인지 확인
         assert!(rel_path.is_relative());
@@ -227,7 +227,7 @@ mod tests {
         let vault = Vault::new(dir.path().to_path_buf());
         vault.init().unwrap();
         let session = make_session();
-        vault.write_session(&session).unwrap();
+        vault.write_session(&session, chrono_tz::Tz::UTC).unwrap();
         let index = std::fs::read_to_string(dir.path().join("index.md")).unwrap();
         assert!(index.contains("claude-code_seCall_a1b2c3d"));
     }
@@ -238,7 +238,7 @@ mod tests {
         let vault = Vault::new(dir.path().to_path_buf());
         vault.init().unwrap();
         let session = make_session();
-        vault.write_session(&session).unwrap();
+        vault.write_session(&session, chrono_tz::Tz::UTC).unwrap();
         let log = std::fs::read_to_string(dir.path().join("log.md")).unwrap();
         assert!(log.contains("ingest | claude-code seCall"));
     }
@@ -250,7 +250,7 @@ mod tests {
         vault.init().unwrap();
         let session = make_session();
         assert!(!vault.session_exists(&session.id));
-        vault.write_session(&session).unwrap();
+        vault.write_session(&session, chrono_tz::Tz::UTC).unwrap();
         assert!(vault.session_exists(&session.id));
     }
 
@@ -305,7 +305,7 @@ pub mod integration {
             .collect();
 
         for session in &sessions {
-            vault.write_session(session).unwrap();
+            vault.write_session(session, chrono_tz::Tz::UTC).unwrap();
         }
 
         let index = std::fs::read_to_string(dir.path().join("index.md")).unwrap();

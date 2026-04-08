@@ -172,11 +172,12 @@ impl SearchEngine {
         &self,
         db: &Database,
         session: &Session,
+        tz: chrono_tz::Tz,
     ) -> anyhow::Result<IndexStats> {
         let mut stats = self.bm25.index_session(db, session)?;
 
         if let Some(vi) = &self.vector {
-            let vec_stats = vi.index_session(db, session).await.unwrap_or_default();
+            let vec_stats = vi.index_session(db, session, tz).await?;
             stats.chunks_embedded += vec_stats.chunks_embedded;
             stats.errors += vec_stats.errors;
         }
@@ -198,9 +199,10 @@ impl SearchEngine {
         &self,
         db: &Database,
         session: &Session,
+        tz: chrono_tz::Tz,
     ) -> anyhow::Result<IndexStats> {
         if let Some(ref v) = self.vector {
-            v.index_session(db, session).await
+            v.index_session(db, session, tz).await
         } else {
             Ok(IndexStats::default())
         }

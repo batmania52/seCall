@@ -28,7 +28,12 @@ fn expand_tilde(path: &str) -> PathBuf {
 /// - `SECALL_VAULT_PATH`
 /// - `SECALL_TURNS`
 /// - `SECALL_DATE`
-pub fn run_post_ingest_hook(config: &Config, session: &Session, vault_path: &Path) -> Result<()> {
+pub fn run_post_ingest_hook(
+    config: &Config,
+    session: &Session,
+    vault_path: &Path,
+    tz: chrono_tz::Tz,
+) -> Result<()> {
     let hook_path_str = match &config.hooks.post_ingest {
         Some(p) => p.clone(),
         None => return Ok(()), // not configured
@@ -51,7 +56,11 @@ pub fn run_post_ingest_hook(config: &Config, session: &Session, vault_path: &Pat
         .env("SECALL_TURNS", session.turns.len().to_string())
         .env(
             "SECALL_DATE",
-            session.start_time.format("%Y-%m-%d").to_string(),
+            session
+                .start_time
+                .with_timezone(&tz)
+                .format("%Y-%m-%d")
+                .to_string(),
         )
         .spawn()?;
 
@@ -107,7 +116,12 @@ mod tests {
         let config = Config::default();
         // Default has no post_ingest hook
         let session = make_test_session();
-        let result = run_post_ingest_hook(&config, &session, Path::new("/tmp/test.md"));
+        let result = run_post_ingest_hook(
+            &config,
+            &session,
+            Path::new("/tmp/test.md"),
+            chrono_tz::Tz::UTC,
+        );
         assert!(result.is_ok());
     }
 
@@ -123,7 +137,12 @@ mod tests {
         };
         let session = make_test_session();
         // Should return Ok even if hook file doesn't exist
-        let result = run_post_ingest_hook(&config, &session, Path::new("/tmp/test.md"));
+        let result = run_post_ingest_hook(
+            &config,
+            &session,
+            Path::new("/tmp/test.md"),
+            chrono_tz::Tz::UTC,
+        );
         assert!(result.is_ok());
     }
 

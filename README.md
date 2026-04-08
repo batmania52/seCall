@@ -295,6 +295,17 @@ secall wiki status
 | 볼트 | Obsidian 호환 Markdown |
 | 위키 엔진 | Claude Code 메타에이전트 |
 
+## 설정
+
+`~/.config/secall/config.toml`에서 아래 옵션을 설정할 수 있습니다:
+
+```toml
+[output]
+timezone = "Asia/Seoul"    # 기본값: UTC (IANA 타임존 이름)
+```
+
+타임존 설정 시 vault 마크다운의 모든 타임스탬프(frontmatter `date`, `start_time`, `end_time`, 턴 시각, 디렉토리 경로)가 해당 타임존으로 변환됩니다. 내부 DB 및 원본 데이터는 UTC로 유지됩니다.
+
 ## CLI 레퍼런스
 
 | 명령 | 설명 |
@@ -644,6 +655,17 @@ secall wiki status
 | Vault | Obsidian-compatible Markdown |
 | Wiki Engine | Claude Code meta-agent |
 
+## Configuration
+
+Configure via `~/.config/secall/config.toml`:
+
+```toml
+[output]
+timezone = "Asia/Seoul"    # Default: UTC (IANA timezone name)
+```
+
+When set, all timestamps in vault markdown (frontmatter `date`, `start_time`, `end_time`, turn timestamps, and directory paths) are rendered in the specified timezone. Internal DB and raw data remain in UTC.
+
 ## CLI Reference
 
 | Command | Description |
@@ -713,6 +735,7 @@ This project was developed using AI coding agents (Claude Code, Codex) orchestra
 
 | 날짜 | 버전 | 내용 |
 |------|------|------|
+| 2026-04-08 | v0.2.2 | 타임존 설정 — `config.toml` `[output] timezone` 으로 vault 타임스탬프 IANA 타임존 변환 |
 | 2026-04-08 | v0.2.1 | `--force` 재수집 옵션 + Dataview `::` 이스케이프 + AGPL-3.0 LICENSE |
 | 2026-04-07 | P11 | 임베딩 성능 최적화 — ORT session pool, batch inference, 병렬 처리, DB 트랜잭션 (49h → ~3-4h, 12-15x 개선) |
 | 2026-04-07 | P10 | 세션 `summary` frontmatter 추가 — 첫 User 턴 기반 자동 생성, `secall migrate summary`로 기존 세션 backfill |
