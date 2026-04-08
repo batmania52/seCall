@@ -297,7 +297,11 @@ secall wiki status
 
 ## 설정
 
-`~/.config/secall/config.toml`에서 아래 옵션을 설정할 수 있습니다:
+설정 파일 경로:
+- **macOS**: `~/Library/Application Support/secall/config.toml`
+- **Linux**: `~/.config/secall/config.toml`
+
+아래 옵션을 설정할 수 있습니다:
 
 ```toml
 [output]
@@ -657,7 +661,9 @@ secall wiki status
 
 ## Configuration
 
-Configure via `~/.config/secall/config.toml`:
+Config file location:
+- **macOS**: `~/Library/Application Support/secall/config.toml`
+- **Linux**: `~/.config/secall/config.toml`
 
 ```toml
 [output]
