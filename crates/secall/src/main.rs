@@ -45,6 +45,10 @@ enum Commands {
         /// Skip sessions with fewer turns than this (0 = no filter)
         #[arg(long, default_value = "0")]
         min_turns: usize,
+
+        /// Re-ingest already-indexed sessions (overwrite vault + DB)
+        #[arg(long)]
+        force: bool,
     },
 
     /// Search session history
@@ -241,8 +245,9 @@ async fn main() -> anyhow::Result<()> {
             auto,
             cwd,
             min_turns,
+            force,
         } => {
-            commands::ingest::run(path, auto, cwd, min_turns, &cli.format).await?;
+            commands::ingest::run(path, auto, cwd, min_turns, force, &cli.format).await?;
         }
         Commands::Recall {
             query,

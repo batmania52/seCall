@@ -321,6 +321,21 @@ impl Database {
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
 
+    /// 세션과 관련된 모든 데이터를 삭제 (sessions, turns, turn_vectors).
+    /// `--force` 재수집 시 기존 데이터를 정리하는 데 사용.
+    pub fn delete_session(&self, session_id: &str) -> Result<()> {
+        self.delete_session_vectors(session_id)?;
+        self.conn.execute(
+            "DELETE FROM turns WHERE session_id = ?1",
+            rusqlite::params![session_id],
+        )?;
+        self.conn.execute(
+            "DELETE FROM sessions WHERE id = ?1",
+            rusqlite::params![session_id],
+        )?;
+        Ok(())
+    }
+
     /// 세션의 모든 벡터를 삭제. 부분 임베딩 정리 및 재임베딩 전 DELETE-first에 사용.
     pub fn delete_session_vectors(&self, session_id: &str) -> Result<usize> {
         // turn_vectors 테이블이 없으면 0 반환 (정상)

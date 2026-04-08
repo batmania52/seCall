@@ -2,6 +2,9 @@
 
 ## v0.2.1 (2026-04-08)
 
+### Added
+- `secall ingest --force` — 이미 인덱싱된 세션도 강제 재수집. vault MD 재생성 + DB 재삽입. claude.ai 재export나 렌더링 변경 적용 시 사용.
+
 ### Fixed
 - Dataview inline field 오염 방지 — vault 마크다운 body의 `::` 패턴에 zero-width space 삽입하여 Dataview가 인라인 필드로 해석하지 않도록 처리. fenced code block / inline code 내부는 보존.
 

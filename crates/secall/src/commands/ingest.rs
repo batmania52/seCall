@@ -50,6 +50,7 @@ pub async fn run(
     auto: bool,
     cwd: Option<PathBuf>,
     min_turns: usize,
+    force: bool,
     format: &OutputFormat,
 ) -> Result<()> {
     let config = Config::load_or_default();
@@ -72,7 +73,8 @@ pub async fn run(
         return Ok(());
     }
 
-    let stats = ingest_sessions(&config, &db, paths, &engine, &vault, min_turns, format).await?;
+    let stats =
+        ingest_sessions(&config, &db, paths, &engine, &vault, min_turns, force, format).await?;
 
     match format {
         OutputFormat::Text => {
@@ -133,6 +135,7 @@ pub async fn ingest_sessions(
     engine: &SearchEngine,
     vault: &Vault,
     min_turns: usize,
+    force: bool,
     format: &OutputFormat,
 ) -> Result<IngestStats> {
     let mut ingested = 0usize;
@@ -181,6 +184,7 @@ pub async fn ingest_sessions(
                             session,
                             format,
                             min_turns,
+                            force,
                             &mut ingested,
                             &mut skipped,
                             &mut errors,
@@ -205,28 +209,30 @@ pub async fn ingest_sessions(
             continue;
         }
 
-        // 1:1 파서: filename-stem 힌트로 빠른 중복 체크
-        let session_id_hint = session_path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
+        // 1:1 파서: filename-stem 힌트로 빠른 중복 체크 (--force 시 스킵)
+        if !force {
+            let session_id_hint = session_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
 
-        match db.session_exists(session_id_hint) {
-            Ok(true) => {
-                skipped += 1;
-                continue;
-            }
-            Ok(false) => {}
-            Err(e) => {
-                tracing::warn!(path = %session_path.display(), error = %e, "DB check failed, skipping");
-                error_details.push(IngestError {
-                    path: session_path.display().to_string(),
-                    session_id: None,
-                    phase: IngestPhase::DuplicateCheck,
-                    message: e.to_string(),
-                });
-                errors += 1;
-                continue;
+            match db.session_exists(session_id_hint) {
+                Ok(true) => {
+                    skipped += 1;
+                    continue;
+                }
+                Ok(false) => {}
+                Err(e) => {
+                    tracing::warn!(path = %session_path.display(), error = %e, "DB check failed, skipping");
+                    error_details.push(IngestError {
+                        path: session_path.display().to_string(),
+                        session_id: None,
+                        phase: IngestPhase::DuplicateCheck,
+                        message: e.to_string(),
+                    });
+                    errors += 1;
+                    continue;
+                }
             }
         }
 
@@ -240,6 +246,7 @@ pub async fn ingest_sessions(
                     session,
                     format,
                     min_turns,
+                    force,
                     &mut ingested,
                     &mut skipped,
                     &mut errors,
@@ -299,6 +306,7 @@ fn ingest_single_session(
     session: secall_core::ingest::Session,
     format: &OutputFormat,
     min_turns: usize,
+    force: bool,
     ingested: &mut usize,
     skipped: &mut usize,
     errors: &mut usize,
@@ -313,11 +321,26 @@ fn ingest_single_session(
         return;
     }
 
-    // 실제 session.id 기준 중복 체크
+    // 실제 session.id 기준 중복 체크 (--force 시 기존 데이터 삭제 후 재삽입)
     match db.session_exists(&session.id) {
-        Ok(true) => {
+        Ok(true) if !force => {
             *skipped += 1;
             return;
+        }
+        Ok(true) => {
+            // --force: 기존 세션 데이터 삭제 (turns, vectors 포함)
+            if let Err(e) = db.delete_session(&session.id) {
+                tracing::warn!(session = &session.id, error = %e, "failed to delete existing session for --force");
+                error_details.push(IngestError {
+                    path: String::new(),
+                    session_id: Some(session.id.clone()),
+                    phase: IngestPhase::DuplicateCheck,
+                    message: e.to_string(),
+                });
+                *errors += 1;
+                return;
+            }
+            tracing::info!(session = &session.id, "deleted existing session for re-ingest");
         }
         Ok(false) => {}
         Err(e) => {
