@@ -45,3 +45,21 @@ version: 1
 - Windows installer (MSI/NSIS) — ZIP 배포
 - Windows-specific UX (PowerShell 자동완성 등)
 - Linux 빌드 추가 (별도 플랜)
+
+## Known Limitations (Windows)
+
+### usearch — HNSW ANN 인덱스 비활성
+
+- **원인**: `usearch` v2.24.0 Rust crate의 `index_plugins.hpp:962`에서 POSIX 전용 `MAP_FAILED` 상수 사용. MSVC에는 `mmap`이 없어 컴파일 실패.
+- **upstream 상태**: C++ 본체(`page_allocator_t`)에는 `VirtualAlloc`/`VirtualFree` Windows 분기가 있으나, 문제의 `memory_mapping_allocator_gt` 클래스에서 `MAP_FAILED`를 직접 참조하여 불완전.
+- **현재 대응**: `cfg(not(target_os = "windows"))`로 조건부 제외. Windows에서는 BLOB 코사인 스캔 fallback (10만 청크 이하 체감 차이 없음).
+- **해결 방안**:
+  1. usearch crate 포크 → `MAP_FAILED` 부분 `#ifdef` 패치 → `Cargo.toml` git 의존성으로 교체
+  2. upstream(unum-cloud/usearch)에 PR 제출 → 다음 릴리스 반영 대기
+  3. 순수 Rust ANN 라이브러리(`hnsw_rs`, `instant-distance`)로 교체
+
+### kiwi-rs — 한국어 형태소 분석기 비활성
+
+- **원인**: C++ 래핑 crate. MSVC 빌드 미확인 — 실제로 깨지는지 테스트하지 않고 선제적으로 제외한 상태.
+- **현재 대응**: `cfg(not(target_os = "windows"))`로 조건부 제외. Windows에서는 Lindera ko-dic fallback.
+- **해결 방안**: CI에서 `cfg` 분기를 제거하고 빌드해보면 MSVC에서 동작할 수도 있음. 실패 시 포크+패치.

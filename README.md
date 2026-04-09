@@ -146,6 +146,12 @@ cargo install --path crates/secall
 - macOS: `secall-aarch64-apple-darwin.tar.gz` / `secall-x86_64-apple-darwin.tar.gz`
 - Windows: `secall-x86_64-pc-windows-msvc.zip` (secall.exe + onnxruntime.dll)
 
+> **Windows 사용자 참고**: 핵심 기능(파싱, BM25 검색, vault, MCP)은 동일하게 동작합니다. 다만 아래 기능은 네이티브 C/C++ 의존성의 MSVC 미지원으로 현재 비활성화되어 있습니다:
+> - **HNSW ANN 인덱스** (`usearch`) — BLOB 코사인 스캔 fallback 사용. 10만 청크 이하에서 체감 차이 없음.
+> - **Kiwi-rs 형태소 분석** — Lindera ko-dic fallback 사용. 한국어 검색 품질은 유사.
+>
+> upstream crate 업데이트 또는 포크 패치로 해결 가능합니다. 진행 상황은 [P13 플랜](docs/plans/secall-p13-windows.md)을 참고하세요.
+
 ### Step 2. 초기화
 
 ```bash
@@ -522,6 +528,12 @@ cargo install --path crates/secall
 **Pre-built binaries** ([Releases](https://github.com/hang-in/seCall/releases)):
 - macOS: `secall-aarch64-apple-darwin.tar.gz` / `secall-x86_64-apple-darwin.tar.gz`
 - Windows: `secall-x86_64-pc-windows-msvc.zip` (secall.exe + onnxruntime.dll)
+
+> **Windows users**: Core features (parsing, BM25 search, vault, MCP) work identically. However, the following features are currently disabled due to upstream C/C++ dependency issues with MSVC:
+> - **HNSW ANN index** (`usearch`) — Falls back to BLOB cosine scan. No noticeable difference under 100k chunks.
+> - **Kiwi-rs morpheme analysis** — Falls back to Lindera ko-dic. Korean search quality is comparable.
+>
+> These can be resolved by upstream crate updates or fork patches. See [P13 plan](docs/plans/secall-p13-windows.md) for details.
 
 ### Step 2. Initialize
 
