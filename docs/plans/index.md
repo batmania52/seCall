@@ -100,3 +100,29 @@ Plan document index. Register new plans here.
 | [02](secall-refactor-p2-task-02.md) | 벡터 검색 메모리 최적화 | A | — | draft |
 | [03](secall-refactor-p2-task-03.md) | 디렉토리 ingest 멀티에이전트 | A | — | draft |
 | [04](secall-refactor-p2-task-04.md) | BLOB 검증 + CLI/MCP 테스트 | A | — | draft |
+
+---
+
+### seCall P16 — Knowledge Graph 빌드
+
+- [전체 계획서](secall-p16-knowledge-graph.md) — in_progress, v2.0, 2026-04-10
+
+| # | Title | Group | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-p16-knowledge-graph-task-01.md) | DB 스키마 + 마이그레이션 | A | — | pass |
+| [02](secall-p16-knowledge-graph-task-02.md) | Graph 코어 모듈 (rework) | B | 01 | rework |
+| [03](secall-p16-knowledge-graph-task-03.md) | CLI 서브커맨드 | C | 01,02 | pass |
+| [04](secall-p16-knowledge-graph-task-04.md) | Sync 통합 + MCP 확장 (rework) | D | 01,02,03 | rework |
+
+---
+
+### seCall P17 — 대화형 온보딩 + 설정 CLI + git branch 수정
+
+- [전체 계획서](secall-p17-cli-git-branch.md) — draft, v1.0, 2026-04-10
+
+| # | Title | Group | Depends | Status |
+|---|---|---|---|---|
+| [01](secall-p17-cli-git-branch-task-01.md) | git branch 하드코딩 제거 | A | — | draft |
+| [02](secall-p17-cli-git-branch-task-02.md) | secall config 서브커맨드 | B | 01 | draft |
+| [03](secall-p17-cli-git-branch-task-03.md) | 대화형 온보딩 (secall init 개선) | C | 01,02 | draft |
+| [04](secall-p17-cli-git-branch-task-04.md) | status 설정 요약 표시 | D | 02 | draft |
