@@ -294,7 +294,11 @@ pub async fn ingest_sessions(
         let tz = config.timezone();
         for (i, session) in vector_tasks.iter().enumerate() {
             let short = &session.id[..8.min(session.id.len())];
-            eprintln!("  [{}/{total}] {short} ({} turns)", i + 1, session.turns.len());
+            eprintln!(
+                "  [{}/{total}] {short} ({} turns)",
+                i + 1,
+                session.turns.len()
+            );
             if let Err(e) = engine.index_session_vectors(db, session, tz).await {
                 tracing::warn!(session = &session.id[..8.min(session.id.len())], error = %e, "vector embedding failed");
                 error_details.push(IngestError {

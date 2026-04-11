@@ -67,7 +67,10 @@ impl Tokenizer for LinderaKoTokenizer {
 
 // ─── KiwiTokenizer ────────────────────────────────────────────────────────────
 
-#[cfg(all(not(target_os = "windows"), not(all(target_os = "linux", target_arch = "aarch64"))))]
+#[cfg(all(
+    not(target_os = "windows"),
+    not(all(target_os = "linux", target_arch = "aarch64"))
+))]
 mod kiwi_impl {
     use super::*;
 
@@ -132,7 +135,10 @@ mod kiwi_impl {
     }
 }
 
-#[cfg(all(not(target_os = "windows"), not(all(target_os = "linux", target_arch = "aarch64"))))]
+#[cfg(all(
+    not(target_os = "windows"),
+    not(all(target_os = "linux", target_arch = "aarch64"))
+))]
 pub use kiwi_impl::KiwiTokenizer;
 
 // ─── SimpleTokenizer ──────────────────────────────────────────────────────────
@@ -152,7 +158,10 @@ impl Tokenizer for SimpleTokenizer {
 /// Falls back to lindera if kiwi-rs fails to initialize.
 pub fn create_tokenizer(backend: &str) -> Result<Box<dyn Tokenizer>> {
     match backend {
-        #[cfg(all(not(target_os = "windows"), not(all(target_os = "linux", target_arch = "aarch64"))))]
+        #[cfg(all(
+            not(target_os = "windows"),
+            not(all(target_os = "linux", target_arch = "aarch64"))
+        ))]
         "kiwi" => match KiwiTokenizer::new() {
             Ok(t) => {
                 tracing::info!("kiwi-rs tokenizer loaded");
@@ -243,7 +252,10 @@ mod tests {
         assert!(tok.is_ok());
     }
 
-    #[cfg(all(not(target_os = "windows"), not(all(target_os = "linux", target_arch = "aarch64"))))]
+    #[cfg(all(
+        not(target_os = "windows"),
+        not(all(target_os = "linux", target_arch = "aarch64"))
+    ))]
     #[test]
     #[ignore]
     fn test_kiwi_korean_tokenization() {
@@ -253,7 +265,10 @@ mod tests {
         assert!(!tokens.is_empty());
     }
 
-    #[cfg(all(not(target_os = "windows"), not(all(target_os = "linux", target_arch = "aarch64"))))]
+    #[cfg(all(
+        not(target_os = "windows"),
+        not(all(target_os = "linux", target_arch = "aarch64"))
+    ))]
     #[test]
     #[ignore]
     fn test_kiwi_english_tokenization() {
@@ -262,7 +277,10 @@ mod tests {
         assert!(!tokens.is_empty());
     }
 
-    #[cfg(all(not(target_os = "windows"), not(all(target_os = "linux", target_arch = "aarch64"))))]
+    #[cfg(all(
+        not(target_os = "windows"),
+        not(all(target_os = "linux", target_arch = "aarch64"))
+    ))]
     #[test]
     #[ignore]
     fn test_kiwi_mixed_tokenization() {
@@ -271,7 +289,10 @@ mod tests {
         assert!(!tokens.is_empty());
     }
 
-    #[cfg(all(not(target_os = "windows"), not(all(target_os = "linux", target_arch = "aarch64"))))]
+    #[cfg(all(
+        not(target_os = "windows"),
+        not(all(target_os = "linux", target_arch = "aarch64"))
+    ))]
     #[test]
     #[ignore]
     fn test_kiwi_empty() {
@@ -280,7 +301,10 @@ mod tests {
         assert!(tokens.is_empty());
     }
 
-    #[cfg(all(not(target_os = "windows"), not(all(target_os = "linux", target_arch = "aarch64"))))]
+    #[cfg(all(
+        not(target_os = "windows"),
+        not(all(target_os = "linux", target_arch = "aarch64"))
+    ))]
     #[test]
     #[ignore]
     fn test_create_tokenizer_kiwi() {
