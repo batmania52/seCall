@@ -197,6 +197,7 @@ mod tests {
             host: None,
             status: None,
             summary: Some("test summary".to_string()),
+            session_type: None,
         }
     }
 

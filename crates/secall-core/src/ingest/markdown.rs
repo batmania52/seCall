@@ -22,6 +22,7 @@ pub struct SessionFrontmatter {
     pub host: Option<String>,
     pub status: Option<String>,
     pub summary: Option<String>,
+    pub session_type: Option<String>,
 }
 
 /// vault 마크다운 파일에서 frontmatter YAML을 파싱.
@@ -115,6 +116,7 @@ pub fn render_session(session: &Session, tz: chrono_tz::Tz) -> String {
         out.push_str(&format!("summary: \"{escaped}\"\n"));
     }
     out.push_str("status: raw\n");
+    out.push_str(&format!("session_type: {}\n", session.session_type));
     out.push_str("---\n\n");
 
     // Title
