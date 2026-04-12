@@ -516,6 +516,7 @@ Claude Code 설정 (`~/.claude/settings.json`)에 추가:
 
 | 날짜 | 버전 | 변경사항 |
 |------|------|---------|
+| 2026-04-12 | v0.3.1 | `secall lint --fix` stale DB 정리 (#15), `wiki_search` created/updated 필드 (#13), P20 테스트 커버리지 강화 (+16 tests) |
 | 2026-04-12 | v0.3.0 | 세션 분류 (regex 규칙, `secall classify`), 위키 플러그인 백엔드 (Ollama, LM Studio), `--include-automated` 플래그 |
 | 2026-04-10 | P17 | 대화형 온보딩 (`secall init` 위저드), `secall config` CLI, git 브랜치 설정 |
 | 2026-04-10 | P16 | Knowledge Graph — frontmatter 기반 결정적 그래프 추출, `secall graph build/stats/export`, MCP `graph_query`, sync Phase 3.7 |
