@@ -7,7 +7,7 @@ use secall_core::{
 };
 
 pub async fn run_update(
-    model: &str,
+    model: Option<&str>,
     backend: Option<&str>,
     since: Option<&str>,
     session: Option<&str>,
@@ -26,6 +26,7 @@ pub async fn run_update(
     let backend_name = backend
         .map(|s| s.to_string())
         .unwrap_or_else(|| config.wiki.default_backend.clone());
+    let resolved_model = resolve_backend_model(&config, &backend_name, model);
 
     // 2. Load prompt — haiku 백엔드는 세션 데이터를 직접 주입
     let prompt = if backend_name == "haiku" {
@@ -80,13 +81,17 @@ pub async fn run_update(
                 max_tokens: cfg.max_tokens,
             })
         }
+        "codex" => Box::new(secall_core::wiki::CodexBackend {
+            model: resolved_model.clone(),
+            vault_path: config.vault.path.clone(),
+        }),
         "claude" => Box::new(secall_core::wiki::ClaudeBackend {
-            model: model.to_string(),
+            model: resolved_model.clone(),
             vault_path: config.vault.path.clone(),
         }),
         _ => {
             anyhow::bail!(
-                "Unknown backend '{}'. Supported: claude, haiku, ollama, lmstudio",
+                "Unknown backend '{}'. Supported: claude, codex, haiku, ollama, lmstudio",
                 backend_name
             );
         }
@@ -324,6 +329,22 @@ pub async fn run_update(
     }
 
     Ok(())
+}
+
+fn resolve_backend_model(config: &Config, backend_name: &str, cli_model: Option<&str>) -> String {
+    if let Some(model) = cli_model {
+        return model.to_string();
+    }
+
+    if let Some(model) = config.wiki_backend_config(backend_name).model {
+        return model;
+    }
+
+    match backend_name {
+        "claude" => "sonnet".to_string(),
+        "codex" => "gpt-5.4".to_string(),
+        _ => String::new(),
+    }
 }
 
 pub fn run_status() -> Result<()> {

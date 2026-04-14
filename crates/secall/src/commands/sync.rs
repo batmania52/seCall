@@ -99,7 +99,7 @@ pub async fn run(local_only: bool, dry_run: bool, no_wiki: bool) -> Result<()> {
             }
             eprintln!("Updating wiki for {} new session(s)...", count);
             for sid in &ingest_result.new_session_ids {
-                match wiki::run_update("sonnet", None, None, Some(sid.as_str()), false, false, None)
+                match wiki::run_update(None, None, None, Some(sid.as_str()), false, false, None)
                     .await
                 {
                     Ok(()) => eprintln!("  ✓ wiki updated for {}", &sid[..sid.len().min(8)]),
