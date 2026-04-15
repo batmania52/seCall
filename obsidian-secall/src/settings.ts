@@ -7,7 +7,7 @@ export interface SeCallSettings {
 }
 
 export const DEFAULT_SETTINGS: SeCallSettings = {
-  serverUrl: "http://127.0.0.1:8080",
+  serverUrl: "http://127.0.0.1:8765",
   dailyNotesFolder: "seCall/daily",
 };
 
@@ -28,7 +28,7 @@ export class SeCallSettingTab extends PluginSettingTab {
       .setDesc("seCall REST API server address")
       .addText((text) =>
         text
-          .setPlaceholder("http://127.0.0.1:8080")
+          .setPlaceholder("http://127.0.0.1:8765")
           .setValue(this.plugin.settings.serverUrl)
           .onChange(async (value) => {
             this.plugin.settings.serverUrl = value;

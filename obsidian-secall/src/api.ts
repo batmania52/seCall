@@ -41,6 +41,16 @@ export class SeCallApi {
     return resp.json;
   }
 
+  async wikiSearch(query: string, limit = 20) {
+    const resp = await requestUrl({
+      url: `${this.baseUrl}/api/wiki`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, limit }),
+    });
+    return resp.json;
+  }
+
   async graph(nodeId: string, depth = 1, relation?: string) {
     const resp = await requestUrl({
       url: `${this.baseUrl}/api/graph`,
@@ -49,5 +59,10 @@ export class SeCallApi {
       body: JSON.stringify({ node_id: nodeId, depth, relation }),
     });
     return resp.json;
+  }
+
+  // alias for backward compatibility (session-view.ts)
+  async graphQuery(nodeId: string, depth = 1, relation?: string) {
+    return this.graph(nodeId, depth, relation);
   }
 }
