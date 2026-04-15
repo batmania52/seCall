@@ -45,6 +45,28 @@ struct OllamaMessage {
     content: String,
 }
 
+// ─── Gemini 응답 구조 ──────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+struct GeminiResponse {
+    candidates: Vec<GeminiCandidate>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GeminiCandidate {
+    content: GeminiContent,
+}
+
+#[derive(Debug, Deserialize)]
+struct GeminiContent {
+    parts: Vec<GeminiPart>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GeminiPart {
+    text: String,
+}
+
 // ─── 정적 프롬프트 ──────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT: &str = r#"Extract semantic relationships from this agent session log. Return JSON only, no explanation.
@@ -178,6 +200,68 @@ async fn extract_with_ollama(
     parse_llm_edges(&ollama_resp.message.content, &fm.session_id)
 }
 
+// ─── Gemini API 호출 ──────────────────────────────────────────────────────
+
+async fn extract_with_gemini(
+    fm: &SessionFrontmatter,
+    body: &str,
+    cfg: &GraphConfig,
+) -> Result<Vec<GraphEdge>> {
+    let api_key = cfg
+        .gemini_api_key
+        .clone()
+        .or_else(|| std::env::var("SECALL_GEMINI_API_KEY").ok())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "gemini api key not set (config.graph.gemini_api_key or SECALL_GEMINI_API_KEY)"
+            )
+        })?;
+
+    let model = cfg.gemini_model.as_deref().unwrap_or("gemini-2.5-flash");
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model, api_key
+    );
+
+    let user_content = build_user_content(fm, body);
+
+    let payload = serde_json::json!({
+        "contents": [{
+            "role": "user",
+            "parts": [{"text": format!("{}\n\n{}", SYSTEM_PROMPT, user_content)}]
+        }],
+        "generationConfig": {
+            "temperature": 0.1,
+            "maxOutputTokens": 512
+        }
+    });
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .json(&payload)
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        anyhow::bail!("gemini api error {}: {}", status, text);
+    }
+
+    let data: GeminiResponse = resp.json().await?;
+    let text = data
+        .candidates
+        .into_iter()
+        .next()
+        .and_then(|c| c.content.parts.into_iter().next())
+        .map(|p| p.text)
+        .unwrap_or_default();
+
+    parse_llm_edges(&text, &fm.session_id)
+}
+
 // ─── LLM 응답 파싱 (공통) ──────────────────────────────────────────────────
 
 /// LLM JSON 응답 → GraphEdge 변환
@@ -256,6 +340,7 @@ async fn extract_with_llm(
                 .unwrap_or("claude-haiku-4-5-20251001");
             extract_with_anthropic(fm, body, model).await
         }
+        "gemini" => extract_with_gemini(fm, body, config).await,
         _ => anyhow::bail!("unknown semantic_backend: {}", config.semantic_backend),
     }
 }
@@ -374,6 +459,8 @@ mod tests {
             ollama_url: None,
             ollama_model: None,
             anthropic_model: None,
+            gemini_api_key: None,
+            gemini_model: None,
         }
     }
 
@@ -541,6 +628,8 @@ mod tests {
             ollama_url: Some("http://localhost:11434".to_string()),
             ollama_model: Some("gemma4:e4b".to_string()),
             anthropic_model: None,
+            gemini_api_key: None,
+            gemini_model: None,
         };
         // introduces_tech 와 discusses_topic 을 유도하는 세션
         let fm = make_fm(

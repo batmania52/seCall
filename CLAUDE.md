@@ -96,21 +96,24 @@
 - P23 — Store/Search 모듈 경계 리팩토링 (search 모듈에서 SQL 분리)
 - P24 — GitHub 이슈 일괄 수정 (#19 timezone, #21 local-only, #22 compact turn, #23 FTS5 중복)
 - PR #20 — OpenVINO embedding backend (외부 기여, CoLuthien)
+- P25 Phase 0-1 — REST API 서버 + Obsidian 플러그인 MVP (PR #24)
+- P25 Phase 2 — 데일리 노트 자동 생성 + Graph 탐색 뷰 (PR #27)
+- P27 — BM25-only 선택 시 graph semantic 자동 비활성화 (#25 fix, PR #27)
 
 ### In Progress
-- P25 — Semantic Graph 활용 + Obsidian 플러그인 (docs/plans/p25-obsidian-plugin.md)
+- P26 — Gemini API 백엔드 추가 (시맨틱 그래프 + Log 일기) — 플랜 문서 작성됨
 
 ### Known Issues
 - 기존 DB에 FTS 중복 잔존 (--force reingest로 세션별 정리 가능)
+- Issue #26 — Codex wiki 백엔드 추가 (외부 기여 PR 요청 중)
 
 ---
 
 ## 8. Next Priorities
 
-1. (P1) P25 Phase 0 — `secall serve` REST API 레이어 구현
-2. (P1) P25 Phase 1 — Obsidian 플러그인 MVP (recall + get + status)
-3. (P2) P25 Phase 2 — 데일리 노트 자동 생성 + Graph 탐색
-4. (P2) Wiki 파이프라인 실행 검증 완료 — `--backend claude`로 동작 확인됨, 대규모 실행 미완
+1. (P1) P26 — Gemini API 백엔드 추가 (wiki 작성은 Gemini Pro 3/3.1 예정)
+2. (P2) Wiki 파이프라인 대규모 실행 검증 — Gemini 백엔드 완성 후 전체 세션 처리
+3. (P2) 테스트 갭 대응 — REST API DTO/라우터 등 미테스트 46건
 
 ---
 

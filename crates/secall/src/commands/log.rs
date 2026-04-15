@@ -119,7 +119,7 @@ pub async fn run(date: Option<String>) -> Result<()> {
         주어진 세션 요약을 바탕으로 그날 무엇을 했는지 자연스러운 한국어로 정리해주세요. \
         과장하지 말고 실제 작업 내용을 간결하게 서술하세요.";
 
-    // Ollama 또는 내용 기반 직접 생성
+    // LLM 백엔드로 일기 생성
     let body = if config.graph.semantic_backend == "ollama" {
         let base_url = config
             .graph
@@ -132,6 +132,28 @@ pub async fn run(date: Option<String>) -> Result<()> {
             Ok(text) => text,
             Err(e) => {
                 eprintln!("Ollama failed ({}), using template output", e);
+                generate_template(&target_date, &by_project, &topic_labels, total)
+            }
+        }
+    } else if config.graph.semantic_backend == "gemini" {
+        let api_key = config
+            .graph
+            .gemini_api_key
+            .clone()
+            .or_else(|| std::env::var("SECALL_GEMINI_API_KEY").ok())
+            .ok_or_else(|| anyhow::anyhow!("gemini api key not set"))?;
+        let model = config
+            .graph
+            .gemini_model
+            .as_deref()
+            .unwrap_or("gemini-2.5-flash")
+            .to_string();
+        eprintln!("Generating work log with {} ({})...", model, target_date);
+        let full_prompt = format!("{}\n\n{}", system_prompt, user_prompt);
+        match call_gemini(&full_prompt, &api_key, &model).await {
+            Ok(text) => text,
+            Err(e) => {
+                eprintln!("Gemini failed ({}), using template output", e);
                 generate_template(&target_date, &by_project, &topic_labels, total)
             }
         }
@@ -184,6 +206,49 @@ async fn call_ollama(base_url: &str, model: &str, system: &str, user: &str) -> R
 
     let r: OllamaResp = resp.json().await?;
     Ok(r.message.content)
+}
+
+async fn call_gemini(prompt: &str, api_key: &str, model: &str) -> Result<String> {
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model, api_key
+    );
+
+    let payload = serde_json::json!({
+        "contents": [{
+            "role": "user",
+            "parts": [{"text": prompt}]
+        }],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 1024
+        }
+    });
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()?;
+
+    let resp = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .json(&payload)
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        anyhow::bail!("gemini api error {}: {}", status, text);
+    }
+
+    let data: serde_json::Value = resp.json().await?;
+    let text = data["candidates"][0]["content"]["parts"][0]["text"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
+
+    Ok(text)
 }
 
 pub(crate) fn generate_template(
