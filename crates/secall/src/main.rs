@@ -201,7 +201,7 @@ enum Commands {
         from_vault: bool,
     },
 
-    /// Manage wiki generation via Claude Code meta-agent
+    /// Manage wiki generation via pluggable LLM backends
     Wiki {
         #[command(subcommand)]
         action: WikiAction,
@@ -264,13 +264,13 @@ enum ModelAction {
 
 #[derive(Subcommand)]
 enum WikiAction {
-    /// Run wiki update using Claude Code as meta-agent
+    /// Run wiki update using a configurable LLM backend
     Update {
-        /// Model: opus or sonnet (Claude 백엔드 전용)
-        #[arg(long, default_value = "sonnet")]
-        model: String,
+        /// Model name (backend-dependent). Claude defaults to sonnet, Codex defaults to gpt-5.4
+        #[arg(long)]
+        model: Option<String>,
 
-        /// Backend: claude | haiku | ollama | lmstudio (기본값: config wiki.default_backend)
+        /// Backend: claude | codex | haiku | ollama | lmstudio (기본값: config wiki.default_backend)
         #[arg(long)]
         backend: Option<String>,
 
@@ -282,7 +282,7 @@ enum WikiAction {
         #[arg(long)]
         session: Option<String>,
 
-        /// Print the prompt without executing Claude Code
+        /// Print the prompt without executing the selected backend
         #[arg(long)]
         dry_run: bool,
 
@@ -462,7 +462,7 @@ async fn main() -> anyhow::Result<()> {
                 review_model,
             } => {
                 commands::wiki::run_update(
-                    &model,
+                    model.as_deref(),
                     backend.as_deref(),
                     since.as_deref(),
                     session.as_deref(),
