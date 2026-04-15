@@ -161,6 +161,10 @@ pub struct GraphConfig {
     pub ollama_model: Option<String>,
     /// Anthropic model name (anthropic backend, 기본: claude-haiku-4-5-20251001)
     pub anthropic_model: Option<String>,
+    /// Gemini API key (gemini backend, fallback: SECALL_GEMINI_API_KEY 환경변수)
+    pub gemini_api_key: Option<String>,
+    /// Gemini model name (gemini backend, 기본: gemini-2.5-flash)
+    pub gemini_model: Option<String>,
 }
 
 impl Default for GraphConfig {
@@ -171,6 +175,8 @@ impl Default for GraphConfig {
             ollama_url: None,
             ollama_model: None,
             anthropic_model: None,
+            gemini_api_key: None,
+            gemini_model: None,
         }
     }
 }
