@@ -125,7 +125,9 @@ pub async fn start_rest_server(
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
     tracing::info!(addr = %addr, "REST API server listening");
-    tracing::info!("endpoints: /api/recall, /api/get, /api/status, /api/wiki, /api/graph, /api/daily");
+    tracing::info!(
+        "endpoints: /api/recall, /api/get, /api/status, /api/wiki, /api/graph, /api/daily"
+    );
 
     axum::serve(listener, router).await?;
     Ok(())
@@ -141,10 +143,7 @@ async fn api_recall(
     }
 }
 
-async fn api_get(
-    State(s): State<AppState>,
-    Json(p): Json<RestGetParams>,
-) -> impl IntoResponse {
+async fn api_get(State(s): State<AppState>, Json(p): Json<RestGetParams>) -> impl IntoResponse {
     match s.do_get(p.into()) {
         Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => error_response(e),
@@ -158,33 +157,24 @@ async fn api_status(State(s): State<AppState>) -> impl IntoResponse {
     }
 }
 
-async fn api_wiki(
-    State(s): State<AppState>,
-    Json(p): Json<WikiSearchParams>,
-) -> impl IntoResponse {
+async fn api_wiki(State(s): State<AppState>, Json(p): Json<WikiSearchParams>) -> impl IntoResponse {
     match s.do_wiki_search(p) {
         Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => error_response(e),
     }
 }
 
-async fn api_graph(
-    State(s): State<AppState>,
-    Json(p): Json<RestGraphParams>,
-) -> impl IntoResponse {
+async fn api_graph(State(s): State<AppState>, Json(p): Json<RestGraphParams>) -> impl IntoResponse {
     match s.do_graph_query(p.into()) {
         Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => error_response(e),
     }
 }
 
-async fn api_daily(
-    State(s): State<AppState>,
-    Json(p): Json<RestDailyParams>,
-) -> impl IntoResponse {
-    let date = p.date.unwrap_or_else(|| {
-        chrono::Local::now().format("%Y-%m-%d").to_string()
-    });
+async fn api_daily(State(s): State<AppState>, Json(p): Json<RestDailyParams>) -> impl IntoResponse {
+    let date = p
+        .date
+        .unwrap_or_else(|| chrono::Local::now().format("%Y-%m-%d").to_string());
     match s.do_daily(&date) {
         Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => error_response(e),

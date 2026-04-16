@@ -497,8 +497,16 @@ async fn main() -> anyhow::Result<()> {
             commands::log::run(date).await?;
         }
         Commands::Graph { action } => match action {
-            GraphAction::Semantic { delay, limit, backend, api_url, model, api_key } => {
-                commands::graph::run_semantic(delay, limit, backend, api_url, model, api_key).await?;
+            GraphAction::Semantic {
+                delay,
+                limit,
+                backend,
+                api_url,
+                model,
+                api_key,
+            } => {
+                commands::graph::run_semantic(delay, limit, backend, api_url, model, api_key)
+                    .await?;
             }
             GraphAction::Build { since, force } => {
                 commands::graph::run_build(since.as_deref(), force)?;

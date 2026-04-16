@@ -78,9 +78,11 @@ fn json_to_session(export: GeminiWebExport) -> Session {
             };
             let content = match msg.content {
                 GeminiWebContent::Text(s) => s,
-                GeminiWebContent::Parts(parts) => {
-                    parts.into_iter().map(|p| p.text).collect::<Vec<_>>().join("\n")
-                }
+                GeminiWebContent::Parts(parts) => parts
+                    .into_iter()
+                    .map(|p| p.text)
+                    .collect::<Vec<_>>()
+                    .join("\n"),
             };
             let timestamp = DateTime::parse_from_rfc3339(&msg.timestamp)
                 .map(|dt| dt.with_timezone(&Utc))
@@ -174,12 +176,11 @@ impl SessionParser for GeminiWebParser {
     fn parse_all(&self, path: &Path) -> crate::error::Result<Vec<Session>> {
         let data = std::fs::read(path).map_err(crate::error::SecallError::VaultIo)?;
         let cursor = Cursor::new(data);
-        let archive = zip::ZipArchive::new(cursor).map_err(|e| {
-            crate::error::SecallError::Parse {
+        let archive =
+            zip::ZipArchive::new(cursor).map_err(|e| crate::error::SecallError::Parse {
                 path: path.to_string_lossy().to_string(),
                 source: anyhow::anyhow!(e),
-            }
-        })?;
+            })?;
         parse_archive(archive)
     }
 }

@@ -36,10 +36,7 @@ impl SeCallMcpServer {
         }
     }
 
-    pub async fn do_recall(
-        &self,
-        params: RecallParams,
-    ) -> anyhow::Result<serde_json::Value> {
+    pub async fn do_recall(&self, params: RecallParams) -> anyhow::Result<serde_json::Value> {
         let limit = params.limit.unwrap_or(10).min(50);
 
         let mut base_filters = SearchFilters {
@@ -67,28 +64,38 @@ impl SeCallMcpServer {
                 QueryType::Temporal => {}
                 QueryType::Keyword => {
                     let results = {
-                        let db = self.db.lock().map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
-                        self.search.search_bm25(&db, &item.query, &base_filters, limit)?
+                        let db = self
+                            .db
+                            .lock()
+                            .map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
+                        self.search
+                            .search_bm25(&db, &item.query, &base_filters, limit)?
                     };
                     all_results.extend(results);
                 }
-                QueryType::Semantic => {
-                    match self.search.embed_query(&item.query).await {
-                        Ok(Some(embedding)) => {
-                            let results = {
-                                let db = self.db.lock().map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
-                                self.search.search_with_embedding(&db, &embedding, limit, &base_filters)?
-                            };
-                            all_results.extend(results);
-                        }
-                        Ok(None) => {
-                            tracing::info!("vector search disabled (Ollama not available)");
-                        }
-                        Err(e) => {
-                            return Err(anyhow::anyhow!("embedding failed: {e}"));
-                        }
+                QueryType::Semantic => match self.search.embed_query(&item.query).await {
+                    Ok(Some(embedding)) => {
+                        let results = {
+                            let db = self
+                                .db
+                                .lock()
+                                .map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
+                            self.search.search_with_embedding(
+                                &db,
+                                &embedding,
+                                limit,
+                                &base_filters,
+                            )?
+                        };
+                        all_results.extend(results);
                     }
-                }
+                    Ok(None) => {
+                        tracing::info!("vector search disabled (Ollama not available)");
+                    }
+                    Err(e) => {
+                        return Err(anyhow::anyhow!("embedding failed: {e}"));
+                    }
+                },
             }
         }
 
@@ -116,7 +123,10 @@ impl SeCallMcpServer {
         let count = all_results.len();
 
         let related_sessions = {
-            let db = self.db.lock().map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
+            let db = self
+                .db
+                .lock()
+                .map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
             let seed_ids: Vec<&str> = all_results
                 .iter()
                 .map(|r| r.session_id.as_str())
@@ -134,7 +144,10 @@ impl SeCallMcpServer {
     }
 
     pub fn do_get(&self, params: GetParams) -> anyhow::Result<serde_json::Value> {
-        let db = self.db.lock().map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
+        let db = self
+            .db
+            .lock()
+            .map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
 
         let (session_id, turn_index) = if let Some(colon_pos) = params.id.rfind(':') {
             let sid = &params.id[..colon_pos];
@@ -197,7 +210,10 @@ impl SeCallMcpServer {
     }
 
     pub fn do_status(&self) -> anyhow::Result<serde_json::Value> {
-        let db = self.db.lock().map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
+        let db = self
+            .db
+            .lock()
+            .map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
         let stats = db.get_stats()?;
         Ok(serde_json::json!({
             "sessions": stats.session_count,
@@ -207,10 +223,7 @@ impl SeCallMcpServer {
         }))
     }
 
-    pub fn do_wiki_search(
-        &self,
-        params: WikiSearchParams,
-    ) -> anyhow::Result<serde_json::Value> {
+    pub fn do_wiki_search(&self, params: WikiSearchParams) -> anyhow::Result<serde_json::Value> {
         let wiki_dir = self.vault_path.join("wiki");
         let limit = params.limit.unwrap_or(5);
         let query_lower = params.query.to_lowercase();
@@ -323,11 +336,11 @@ impl SeCallMcpServer {
         Ok(serde_json::json!({ "results": results, "count": count }))
     }
 
-    pub fn do_graph_query(
-        &self,
-        params: GraphQueryParams,
-    ) -> anyhow::Result<serde_json::Value> {
-        let db = self.db.lock().map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
+    pub fn do_graph_query(&self, params: GraphQueryParams) -> anyhow::Result<serde_json::Value> {
+        let db = self
+            .db
+            .lock()
+            .map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
         let depth = params.depth.unwrap_or(1).min(3);
 
         let neighbors = db.get_neighbors(&params.node_id)?;
@@ -393,7 +406,10 @@ impl SeCallMcpServer {
     }
 
     pub fn do_daily(&self, date: &str) -> anyhow::Result<serde_json::Value> {
-        let db = self.db.lock().map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
+        let db = self
+            .db
+            .lock()
+            .map_err(|e| anyhow::anyhow!("DB lock: {e}"))?;
 
         let sessions = db.get_sessions_for_date(date)?;
         let total_sessions = sessions.len();

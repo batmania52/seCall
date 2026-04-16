@@ -423,7 +423,10 @@ path = "/tmp/test-vault"
         std::env::set_var("SECALL_GRAPH_API_URL", "http://custom:8080");
         let config = Config::default().apply_env_overrides();
         std::env::remove_var("SECALL_GRAPH_API_URL");
-        assert_eq!(config.graph.ollama_url, Some("http://custom:8080".to_string()));
+        assert_eq!(
+            config.graph.ollama_url,
+            Some("http://custom:8080".to_string())
+        );
     }
 
     #[test]
@@ -434,7 +437,10 @@ path = "/tmp/test-vault"
         let config = Config::default().apply_env_overrides();
         std::env::remove_var("SECALL_GRAPH_BACKEND");
         std::env::remove_var("SECALL_GRAPH_MODEL");
-        assert_eq!(config.graph.gemini_model, Some("gemini-2.0-flash".to_string()));
+        assert_eq!(
+            config.graph.gemini_model,
+            Some("gemini-2.0-flash".to_string())
+        );
     }
 
     #[test]
@@ -443,6 +449,9 @@ path = "/tmp/test-vault"
         std::env::set_var("SECALL_GRAPH_API_KEY", "test-key-123");
         let config = Config::default().apply_env_overrides();
         std::env::remove_var("SECALL_GRAPH_API_KEY");
-        assert_eq!(config.graph.gemini_api_key, Some("test-key-123".to_string()));
+        assert_eq!(
+            config.graph.gemini_api_key,
+            Some("test-key-123".to_string())
+        );
     }
 }
