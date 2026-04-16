@@ -339,6 +339,23 @@ impl Config {
         if let Ok(p) = std::env::var("SECALL_VAULT_PATH") {
             self.vault.path = PathBuf::from(p);
         }
+        // Graph semantic 환경변수 (CLI 플래그보다 낮은 우선순위)
+        if let Ok(b) = std::env::var("SECALL_GRAPH_BACKEND") {
+            self.graph.semantic_backend = b;
+        }
+        if let Ok(u) = std::env::var("SECALL_GRAPH_API_URL") {
+            self.graph.ollama_url = Some(u);
+        }
+        if let Ok(m) = std::env::var("SECALL_GRAPH_MODEL") {
+            match self.graph.semantic_backend.as_str() {
+                "gemini" => self.graph.gemini_model = Some(m),
+                "anthropic" => self.graph.anthropic_model = Some(m),
+                _ => self.graph.ollama_model = Some(m),
+            }
+        }
+        if let Ok(k) = std::env::var("SECALL_GRAPH_API_KEY") {
+            self.graph.gemini_api_key = Some(k);
+        }
         self
     }
 
@@ -356,6 +373,9 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 환경변수를 변경하는 테스트들이 병렬 실행될 때 서로 간섭하지 않도록 직렬화
+    static ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn test_timezone_default_is_utc() {
@@ -386,5 +406,43 @@ path = "/tmp/test-vault"
 "#;
         let config: Config = toml::from_str(toml_str).unwrap();
         assert_eq!(config.output.timezone, "UTC");
+    }
+
+    #[test]
+    fn test_graph_env_override_backend() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        std::env::set_var("SECALL_GRAPH_BACKEND", "gemini");
+        let config = Config::default().apply_env_overrides();
+        std::env::remove_var("SECALL_GRAPH_BACKEND");
+        assert_eq!(config.graph.semantic_backend, "gemini");
+    }
+
+    #[test]
+    fn test_graph_env_override_api_url() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        std::env::set_var("SECALL_GRAPH_API_URL", "http://custom:8080");
+        let config = Config::default().apply_env_overrides();
+        std::env::remove_var("SECALL_GRAPH_API_URL");
+        assert_eq!(config.graph.ollama_url, Some("http://custom:8080".to_string()));
+    }
+
+    #[test]
+    fn test_graph_env_override_model_gemini() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        std::env::set_var("SECALL_GRAPH_BACKEND", "gemini");
+        std::env::set_var("SECALL_GRAPH_MODEL", "gemini-2.0-flash");
+        let config = Config::default().apply_env_overrides();
+        std::env::remove_var("SECALL_GRAPH_BACKEND");
+        std::env::remove_var("SECALL_GRAPH_MODEL");
+        assert_eq!(config.graph.gemini_model, Some("gemini-2.0-flash".to_string()));
+    }
+
+    #[test]
+    fn test_graph_env_override_api_key() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        std::env::set_var("SECALL_GRAPH_API_KEY", "test-key-123");
+        let config = Config::default().apply_env_overrides();
+        std::env::remove_var("SECALL_GRAPH_API_KEY");
+        assert_eq!(config.graph.gemini_api_key, Some("test-key-123".to_string()));
     }
 }

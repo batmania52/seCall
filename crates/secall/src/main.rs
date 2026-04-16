@@ -313,12 +313,24 @@ enum MigrateAction {
 enum GraphAction {
     /// Re-extract semantic edges (LLM) for all sessions without rebuilding embeddings
     Semantic {
-        /// 세션당 요청 사이 대기 시간(초). Ollama 과부하 방지용 (기본: 2)
-        #[arg(long, default_value_t = 2)]
-        delay: u64,
+        /// 세션당 요청 사이 대기 시간(초). 소수점 가능 (기본: 2.5)
+        #[arg(long, default_value_t = 2.5)]
+        delay: f64,
         /// 처리할 최대 세션 수 (기본: 전체)
         #[arg(long)]
         limit: Option<usize>,
+        /// LLM 백엔드 오버라이드: "ollama" | "gemini" | "anthropic" | "disabled"
+        #[arg(long)]
+        backend: Option<String>,
+        /// API base URL (예: http://localhost:11434, Ollama 전용)
+        #[arg(long)]
+        api_url: Option<String>,
+        /// 모델명 오버라이드 (예: gemma4:e4b, gemini-2.5-flash)
+        #[arg(long)]
+        model: Option<String>,
+        /// API 키 오버라이드 (Gemini 등). 보안상 환경변수 SECALL_GRAPH_API_KEY 사용 권장
+        #[arg(long)]
+        api_key: Option<String>,
     },
     /// Build graph from vault sessions
     Build {
@@ -485,8 +497,8 @@ async fn main() -> anyhow::Result<()> {
             commands::log::run(date).await?;
         }
         Commands::Graph { action } => match action {
-            GraphAction::Semantic { delay, limit } => {
-                commands::graph::run_semantic(delay, limit).await?;
+            GraphAction::Semantic { delay, limit, backend, api_url, model, api_key } => {
+                commands::graph::run_semantic(delay, limit, backend, api_url, model, api_key).await?;
             }
             GraphAction::Build { since, force } => {
                 commands::graph::run_build(since.as_deref(), force)?;

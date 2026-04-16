@@ -53,8 +53,11 @@ struct GeminiResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct GeminiCandidate {
     content: GeminiContent,
+    #[serde(default)]
+    finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -231,8 +234,27 @@ async fn extract_with_gemini(
             "parts": [{"text": format!("{}\n\n{}", SYSTEM_PROMPT, user_content)}]
         }],
         "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 512
+            "temperature": 0.0,
+            "maxOutputTokens": 65536,
+            "responseMimeType": "application/json",
+            "responseSchema": {
+                "type": "object",
+                "properties": {
+                    "edges": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "relation": { "type": "string" },
+                                "target_type": { "type": "string" },
+                                "target_label": { "type": "string" }
+                            },
+                            "required": ["relation", "target_type", "target_label"]
+                        }
+                    }
+                },
+                "required": ["edges"]
+            }
         }
     });
 
@@ -251,10 +273,13 @@ async fn extract_with_gemini(
     }
 
     let data: GeminiResponse = resp.json().await?;
-    let text = data
-        .candidates
-        .into_iter()
-        .next()
+    let candidate = data.candidates.into_iter().next();
+    if let Some(ref c) = candidate {
+        if c.finish_reason.as_deref() == Some("MAX_TOKENS") {
+            anyhow::bail!("gemini response truncated (MAX_TOKENS) — output too long");
+        }
+    }
+    let text = candidate
         .and_then(|c| c.content.parts.into_iter().next())
         .map(|p| p.text)
         .unwrap_or_default();

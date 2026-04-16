@@ -7,8 +7,33 @@ use secall_core::{
 };
 
 /// 전체 세션에 대해 시맨틱 엣지만 재추출. 임베딩은 건드리지 않음.
-pub async fn run_semantic(delay_secs: u64, limit: Option<usize>) -> Result<()> {
-    let config = Config::load_or_default();
+pub async fn run_semantic(
+    delay_secs: f64,
+    limit: Option<usize>,
+    backend: Option<String>,
+    api_url: Option<String>,
+    model: Option<String>,
+    api_key: Option<String>,
+) -> Result<()> {
+    let mut config = Config::load_or_default();
+
+    // CLI 플래그 오버라이드 (우선순위: CLI > 환경변수 > config.toml > 기본값)
+    if let Some(b) = backend {
+        config.graph.semantic_backend = b;
+    }
+    if let Some(u) = api_url {
+        config.graph.ollama_url = Some(u);
+    }
+    if let Some(m) = model {
+        match config.graph.semantic_backend.as_str() {
+            "gemini" => config.graph.gemini_model = Some(m),
+            "anthropic" => config.graph.anthropic_model = Some(m),
+            _ => config.graph.ollama_model = Some(m),
+        }
+    }
+    if let Some(k) = api_key {
+        config.graph.gemini_api_key = Some(k);
+    }
     let db = Database::open(&get_default_db_path())?;
 
     if !config.graph.semantic {
@@ -94,8 +119,8 @@ pub async fn run_semantic(delay_secs: u64, limit: Option<usize>) -> Result<()> {
             }
         }
 
-        if delay_secs > 0 && i + 1 < process_count {
-            tokio::time::sleep(std::time::Duration::from_secs(delay_secs)).await;
+        if delay_secs > 0.0 && i + 1 < process_count {
+            tokio::time::sleep(std::time::Duration::from_secs_f64(delay_secs)).await;
         }
     }
 
